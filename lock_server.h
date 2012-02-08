@@ -10,14 +10,13 @@
 #include "rpc.h"
 
 class lock_server {
+	protected:
+		int nacquire;
 
- protected:
-  int nacquire;
-
- public:
-  lock_server();
-  ~lock_server() {};
-  lock_protocol::status stat(int clt, lock_protocol::lockid_t lid, int &);
+	public:
+		lock_server();
+		~lock_server() {};
+		lock_protocol::status stat(int clt, lock_protocol::lockid_t lid, int &);
 };
 
 #endif 
