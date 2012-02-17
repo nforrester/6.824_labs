@@ -299,6 +299,8 @@ class rpcs : public chanmgr {
         // indexed by client nonce.
 	std::map<unsigned int, std::list<reply_t> > reply_window_;
 
+	std::map<unsigned int, unsigned int> xid_rep_max;
+
 	void free_reply_window(void);
 	void add_reply(unsigned int clt_nonce, unsigned int xid, char *b, int sz);
 

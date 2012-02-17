@@ -63,12 +63,14 @@ lock_protocol::status lock_server::acquire(int clt, lock_protocol::lockid_t lid,
 
 	pthread_mutex_unlock(&locks_held_mutex);
 
+	printf("clt %d acquired lock %llu\n", clt, lid);
+
 	return ret;
 }
 
 lock_protocol::status lock_server::release(int clt, lock_protocol::lockid_t lid, int &r) {
 	lock_protocol::status ret = lock_protocol::OK;
-	printf("acquire request from clt %d on lock %llu\n", clt, lid);
+	printf("release request from clt %d on lock %llu\n", clt, lid);
 	r = 1;
 
 	pthread_mutex_lock(&locks_held_mutex);
@@ -83,6 +85,8 @@ lock_protocol::status lock_server::release(int clt, lock_protocol::lockid_t lid,
 	}
 
 	pthread_mutex_unlock(&locks_held_mutex);
+
+	printf("clt %d released lock %llu\n", clt, lid);
 
 	return ret;
 }
