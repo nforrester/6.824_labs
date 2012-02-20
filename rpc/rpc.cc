@@ -575,8 +575,20 @@ rpcs::dispatch(djob_t *j)
 			}
 		}
 
+		std::cout << "CD&U: " << h.clt_nonce << " " << h.xid << " " << h.xid_rep << std::endl;
 		stat = checkduplicate_and_update(h.clt_nonce, h.xid,
                                                  h.xid_rep, &b1, &sz1);
+		if (stat == NEW) {
+			std::cout << "CD&U RET: NEW\n";
+		} else if (stat == INPROGRESS) {
+			std::cout << "CD&U RET: INPROGRESS\n";
+		} else if (stat == DONE) {
+			std::cout << "CD&U RET: DONE " << sz1 << std::endl;
+		} else if (stat == FORGOTTEN) {
+			std::cout << "CD&U RET: FORGOTTEN\n";
+		} else {
+			std::cout << "CD&U RET: FUCK\n";
+		}
 	} else {
 		// this client does not require at most once logic
 		stat = NEW;
@@ -656,13 +668,50 @@ rpcs::dispatch(djob_t *j)
 //   INPROGRESS: seen this xid, and still processing it.
 //   DONE: seen this xid, previous reply returned in *b and *sz.
 //   FORGOTTEN: might have seen this xid, but deleted previous reply.
-rpcs::rpcstate_t 
-rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
-		unsigned int xid_rep, char **b, int *sz)
-{
+rpcs::rpcstate_t rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid, unsigned int xid_rep, char **b, int *sz) {
+	std::list<reply_t>::iterator liter;
+
 	ScopedLock rwl(&reply_window_m_);
 
-        // You fill this in for Lab 1.
+	if (reply_window_.count(clt_nonce) == 0) {
+		std::list<reply_t> empty;
+		reply_window_[clt_nonce] = empty;
+		xid_rep_max[clt_nonce] = xid_rep;
+	}
+
+	if (xid_rep_max[clt_nonce] < xid_rep) {
+		xid_rep_max[clt_nonce] = xid_rep;
+	}
+
+	liter = reply_window_[clt_nonce].begin();
+	while (liter != reply_window_[clt_nonce].end() && (*liter).xid <= xid_rep_max[clt_nonce]) {
+		liter = reply_window_[clt_nonce].erase(liter);
+	}
+
+	if (xid <= xid_rep_max[clt_nonce]) {
+		return FORGOTTEN;
+	}
+
+	liter = reply_window_[clt_nonce].begin();
+	while (liter != reply_window_[clt_nonce].end()) {
+		if ((*liter).xid == xid) {
+			if ((*liter).cb_present) {
+				*b = (*liter).buf;
+				*sz = (*liter).sz;
+				return DONE;
+			} else {
+				return INPROGRESS;
+			}
+		} else if ((*liter).xid > xid) {
+			reply_t new_rep(xid);
+			reply_window_[clt_nonce].insert(liter, new_rep);
+			return NEW;
+		}
+		liter++;
+	}
+
+	reply_t new_rep(xid);
+	reply_window_[clt_nonce].insert(liter, new_rep);
 	return NEW;
 }
 
@@ -671,12 +720,21 @@ rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
 // add_reply() should remember b and sz.
 // free_reply_window() and checkduplicate_and_update is responsible for 
 // calling free(b).
-void
-rpcs::add_reply(unsigned int clt_nonce, unsigned int xid,
-		char *b, int sz)
-{
+void rpcs::add_reply(unsigned int clt_nonce, unsigned int xid, char *b, int sz) {
+	std::list<reply_t>::iterator liter;
+
 	ScopedLock rwl(&reply_window_m_);
-        // You fill this in for Lab 1.
+
+	liter = reply_window_[clt_nonce].begin();
+	while (liter != reply_window_[clt_nonce].end()) {
+		if ((*liter).xid == xid) {
+			(*liter).cb_present = true;
+			(*liter).buf = b;
+			(*liter).sz = sz;
+			return;
+		}
+		liter++;
+	}
 }
 
 void
