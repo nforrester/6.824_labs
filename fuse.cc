@@ -188,6 +188,7 @@ void fuseserver_write(fuse_req_t req, fuse_ino_t ino,
 	printf("GOT HERE: write\n");
 #if 1
 	// Change the above line to "#if 1", and your code goes here
+	yfs->write(ino, size, off, buf);
 	fuse_reply_write(req, size);
 #else
 	fuse_reply_err(req, ENOSYS);

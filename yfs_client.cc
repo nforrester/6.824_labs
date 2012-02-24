@@ -203,24 +203,38 @@ std::string yfs_client::read(inum finum, unsigned long long size, unsigned long 
 	if (offset >= file_contents.size()) {
 		return std::string();
 	}
-	return file_contents.substr(offset, size);
+	printf("READ(%llu, %llu, %llu)", finum, size, offset);
+	printf("BEGIN READ WHOLE:\n%s\nEND READ WHOLE\n", file_contents.c_str());
+	file_contents = file_contents.substr(offset, size);
+	printf("BEGIN READ PART:\n%s\nEND READ PART\n", file_contents.c_str());
+	return file_contents;
 }
 
 void yfs_client::write(inum finum, unsigned long long size, unsigned long long offset, const char *buf) {
+	printf("WRITE(%llu, %llu, %llu):\nBEGIN WRITE:\n%s\nEND WRITE\n", finum, size, offset, buf);
 	std::string file_contents;
 	if (ec->get(finum, file_contents) != extent_protocol::OK) {
 		printf("failed to get contents of file!\n");
 		return;
 	}
-	if (offset + size > file_contents.size()) {
+	printf("gotten contents\n");
+	if (offset < file_contents.size() && offset + size > file_contents.size()) {
 		file_contents.erase(offset, file_contents.size());
 	}
+	printf("truncated if necessary\n");
 	if (offset > file_contents.size()) {
 		file_contents.insert(file_contents.size(), offset - file_contents.size(), 0);
 	}
+	printf("padded if necessary\n");
 	if (offset == file_contents.size()) {
 		file_contents.insert(offset, buf, size);
 	} else {
 		file_contents.replace(offset, size, buf, size);
 	}
+	printf("written\n");
+	if (ec->put(finum, file_contents) != extent_protocol::OK) {
+		printf("failed to put contents of file!\n");
+		return;
+	}
+	printf("everything hunky dory!\n");
 }
