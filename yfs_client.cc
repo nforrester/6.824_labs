@@ -95,15 +95,7 @@ bool yfs_client::lookup(inum parent, const char *name, fuse_entry_param *e) {
 			if (strncmp(name, fname, MAX_FILENAME_LEN) == 0) {
 				printf("lookup finum: %llu\n", (unsigned long long) finum);
 				e->ino = finum;
-				extent_protocol::attr a;
-				if (ec->getattr(finum, a) == extent_protocol::OK) {
-					e->attr.st_atime = a.atime;
-					e->attr.st_mtime = a.mtime;
-					e->attr.st_ctime = a.ctime;
-					e->attr.st_size = a.size;
-					return true;
-				}
-				break;
+				return true;
 			}
 		}
 	}

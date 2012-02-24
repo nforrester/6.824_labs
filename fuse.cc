@@ -279,6 +279,7 @@ void fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name) {
 	// You fill this in for Lab 2
 	printf("GOT HERE: lookup(%llu %s)\n", (unsigned long long) parent, name);
 	found = yfs->lookup(parent, name, &e);
+	getattr(e.ino, e.attr);
 	if (found) {
 		fuse_reply_entry(req, &e);
 	} else {
