@@ -165,8 +165,31 @@ yfs_client::status yfs_client::readdir(void (*dirbuf_add)(struct dirbuf*, const 
 	fname[0] = 0;
 	while (!dc.eof()) {
 		dc >> finum;
+		dc.getline(fname, MAX_FILENAME_LEN); // call once to strip newline
 		dc.getline(fname, MAX_FILENAME_LEN);
 		(*dirbuf_add)(b, fname, finum);
+	}
+	return OK;
+}
+
+yfs_client::status yfs_client::setsize(inum finum, unsigned long long size) {
+	if (size == 0) {
+		// we don't care what was there before, saves some rpc calls
+		if (ec->put(finum, std::string()) != extent_protocol::OK) {
+			printf("failed to truncate file!\n");
+			return IOERR;
+		}
+	} else {
+		std::string file_contents;
+		if (ec->get(finum, file_contents) != extent_protocol::OK) {
+			printf("failed to get contents of file!\n");
+			return IOERR;
+		}
+		file_contents.resize(size, 0);
+		if (ec->put(finum, file_contents) != extent_protocol::OK) {
+			printf("failed to put contents of file!\n");
+			return IOERR;
+		}
 	}
 	return OK;
 }

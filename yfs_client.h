@@ -48,6 +48,7 @@ class yfs_client {
 		bool lookup(inum, const char*, fuse_entry_param*);
 		status create(inum, const char*, fuse_entry_param*);
 		status readdir(void (*dirbuf_add)(struct dirbuf*, const char*, fuse_ino_t), struct dirbuf*, inum);
+		status setsize(inum, unsigned long long);
 };
 
 #endif 
