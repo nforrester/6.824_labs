@@ -193,3 +193,15 @@ yfs_client::status yfs_client::setsize(inum finum, unsigned long long size) {
 	}
 	return OK;
 }
+
+std::string yfs_client::read(inum finum, unsigned long long size, unsigned long long offset) {
+	std::string file_contents;
+	if (ec->get(finum, file_contents) != extent_protocol::OK) {
+		printf("failed to get contents of file!\n");
+		return std::string();
+	}
+	if (offset >= file_contents.size()) {
+		return std::string();
+	}
+	return file_contents.substr(offset, size);
+}
