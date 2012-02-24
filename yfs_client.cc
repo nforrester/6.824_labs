@@ -92,6 +92,7 @@ bool yfs_client::lookup(inum parent, const char *name, fuse_entry_param *e) {
 			dc >> finum;
 			dc.getline(fname, MAX_FILENAME_LEN);
 			if (strncmp(name, fname, MAX_FILENAME_LEN) == 0) {
+				printf("lookup finum: %llu\n", (unsigned long long) finum);
 				e->ino = finum;
 				extent_protocol::attr a;
 				if (ec->getattr(finum, a) == extent_protocol::OK) {
@@ -150,7 +151,9 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 		return NOENT;
 	}
 	
+	printf("create finum: %llu\n", (unsigned long long) finum);
 	e->ino = finum;
+	printf("create e->ino: %lu\n", (unsigned long) e->ino);
 	if (ec->getattr(finum, a_tmp) != extent_protocol::OK) {
 		printf("failed to getattr new file!\n");
 		return NOENT;
@@ -160,7 +163,27 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 	e->attr.st_mtime = a_tmp.mtime;
 	e->attr.st_ctime = a_tmp.ctime;
 	e->attr.st_size = a_tmp.size;
+	printf("create e->atrr.st_size: %lu\n", (unsigned long) e->attr.st_size);
 
 	printf("everything is hunky dory!\n");
+	return OK;
+}
+
+yfs_client::status yfs_client::readdir(void (*dirbuf_add)(struct dirbuf*, const char*, fuse_ino_t), struct dirbuf *b, inum dir_inum) {
+	std::string dir_contents;
+	if (ec->get(dir_inum, dir_contents) != extent_protocol::OK) {
+		printf("failed to get directory contents!\n");
+		return NOENT;
+	}
+
+	std::istringstream dc(dir_contents, std::istringstream::in);
+	inum finum = 0;
+	char fname[MAX_FILENAME_LEN];
+	fname[0] = 0;
+	while (!dc.eof()) {
+		dc >> finum;
+		dc.getline(fname, MAX_FILENAME_LEN);
+		(*dirbuf_add)(b, fname, finum);
+	}
 	return OK;
 }

@@ -227,8 +227,15 @@ fuseserver_create(fuse_req_t req, fuse_ino_t parent, const char *name,
   struct fuse_entry_param e;
   yfs_client::status ret;
   if( (ret = fuseserver_createhelper( parent, name, mode, &e )) == yfs_client::OK ) {
+    printf("hello world yay\n");
+    printf("fscreate e.ino: %lu\n", (unsigned long) e.ino);
+    printf("fscreate e.atrr.st_size: %lu\n", (unsigned long) e.attr.st_size);
+    printf("fscreate e.atrr.st_atime: %lu\n", (unsigned long) e.attr.st_atime);
+    printf("fscreate e.atrr.st_mtime: %lu\n", (unsigned long) e.attr.st_mtime);
+    printf("fscreate e.atrr.st_ctime: %lu\n", (unsigned long) e.attr.st_ctime);
     fuse_reply_create(req, &e, fi);
   } else {
+    printf("hello world fuck\n");
 		if (ret == yfs_client::EXIST) {
 			fuse_reply_err(req, EEXIST);
 		}else{
@@ -242,8 +249,10 @@ void fuseserver_mknod( fuse_req_t req, fuse_ino_t parent,
   struct fuse_entry_param e;
   yfs_client::status ret;
   if( (ret = fuseserver_createhelper( parent, name, mode, &e )) == yfs_client::OK ) {
+    printf("hello world yay2\n");
     fuse_reply_entry(req, &e);
   } else {
+    printf("hello world fuck2\n");
 		if (ret == yfs_client::EXIST) {
 			fuse_reply_err(req, EEXIST);
 		}else{
@@ -318,6 +327,7 @@ void fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 	struct dirbuf b;
 
 	printf("fuseserver_readdir\n");
+	fflush(stdout);
 
 	if(!yfs->isdir(inum)){
 		fuse_reply_err(req, ENOTDIR);
@@ -330,6 +340,8 @@ void fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 	// You fill this in for Lab 2
 
 	printf("GOT HERE: readdir\n");
+
+	yfs->readdir(&dirbuf_add, &b, ino);
 
 	reply_buf_limited(req, b.p, b.size, off, size);
 	free(b.p);

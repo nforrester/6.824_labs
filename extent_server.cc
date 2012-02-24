@@ -31,6 +31,8 @@ extent_server::extent_server() {
 }
 
 int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &) {
+	printf("put: %llu\n", (unsigned long long) id);
+	printf("BEGIN PUT BUF\n%s\nEND PUT BUF\n", buf.c_str());
 	unsigned int now = time(NULL);
 	extent_protocol::attr a;
 	a.atime = now;
@@ -41,10 +43,12 @@ int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &) {
 	pthread_mutex_lock(&extents_mutex);
 	extents[id] = ext;
 	pthread_mutex_unlock(&extents_mutex);
+	printf("put OK\n");
 	return extent_protocol::OK;
 }
 
 int extent_server::get(extent_protocol::extentid_t id, std::string &buf) {
+	printf("get: %llu\n", (unsigned long long) id);
 	unsigned int now = time(NULL);
 	pthread_mutex_lock(&extents_mutex);
 	if (extents.count(id) == 1) {
@@ -52,14 +56,17 @@ int extent_server::get(extent_protocol::extentid_t id, std::string &buf) {
 		extents[id].a.atime = now;
 		extents[id].a.ctime = now;
 		pthread_mutex_unlock(&extents_mutex);
+		printf("get OK\nBEGIN GET BUF\n%s\nEND GET BUF\n", buf.c_str());
 		return extent_protocol::OK;
 	} else {
 		pthread_mutex_unlock(&extents_mutex);
+		printf("get NOENT\n");
 		return extent_protocol::NOENT;
 	}
 }
 
 int extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a) {
+	printf("getattr: %llu\n", (unsigned long long) id);
 	pthread_mutex_lock(&extents_mutex);
 	if (extents.count(id) == 1) {
 		a.size = extents[id].a.size;
@@ -67,21 +74,26 @@ int extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr
 		a.mtime = extents[id].a.mtime;
 		a.ctime = extents[id].a.ctime;
 		pthread_mutex_unlock(&extents_mutex);
+		printf("getattr OK\n");
 		return extent_protocol::OK;
 	} else {
 		pthread_mutex_unlock(&extents_mutex);
+		printf("getattr NOENT\n");
 		return extent_protocol::NOENT;
 	}
 }
 
 int extent_server::remove(extent_protocol::extentid_t id, int &) {
+	printf("remove: %llu\n", (unsigned long long) id);
 	pthread_mutex_lock(&extents_mutex);
 	if (extents.count(id) == 1) {
 		extents.erase(id);
 		pthread_mutex_unlock(&extents_mutex);
+		printf("remove OK\n");
 		return extent_protocol::OK;
 	} else {
 		pthread_mutex_unlock(&extents_mutex);
+		printf("remove NOENT\n");
 		return extent_protocol::NOENT;
 	}
 }
