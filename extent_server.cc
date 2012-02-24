@@ -7,33 +7,70 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <pthread.h>
 
-extent_server::extent_server() {}
+extent::extent(std::string buffer, extent_protocol::attr attributes) {
+	buf = buffer;
+	a = attributes;
+}
+
+extent_server::extent_server() {
+	pthread_mutex_init(&extents_mutex, NULL);
+}
 
 int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &) {
-	// You fill this in for Lab 2.
-	return extent_protocol::IOERR;
-}
-
-int extent_server::get(extent_protocol::extentid_t id, std::string &buf) {
-	// You fill this in for Lab 2.
-	return extent_protocol::IOERR;
-}
-
-int extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a) {
-	// You fill this in for Lab 2.
-	// You replace this with a real implementation. We send a phony response
-	// for now because it's difficult to get FUSE to do anything (including
-	// unmount) if getattr fails.
-	a.size = 0;
-	a.atime = 0;
-	a.mtime = 0;
-	a.ctime = 0;
+	unsigned int now = time();
+	extent_protocol::attr a;
+	a.atime = now;
+	a.mtime = now;
+	a.ctime = now;
+	a.size = buf.size();
+	extent ext(buf, a);
+	pthread_mutex_lock(&extents_mutex);
+	extents[id] = ext;
+	pthread_mutex_unlock(&extents_mutex);
 	return extent_protocol::OK;
 }
 
+int extent_server::get(extent_protocol::extentid_t id, std::string &buf) {
+	unsigned int now = time();
+	pthread_mutex_lock(&extents_mutex);
+	if (extents.count(id) == 1) {
+		buf = extents[id].buf;
+		extents[id].a.atime = now;
+		extents[id].a.ctime = now;
+		pthread_mutex_unlock(&extents_mutex);
+		return extent_protocol::OK;
+	} else {
+		pthread_mutex_unlock(&extents_mutex);
+		return extent_protocol::NOENT;
+	}
+}
+
+int extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a) {
+	pthread_mutex_lock(&extents_mutex);
+	if (extents.count(id) == 1) {
+		a.size = extents[id].a.size;
+		a.atime = extents[id].a.atime;
+		a.mtime = extents[id].a.mtime;
+		a.ctime = extents[id].a.ctime;
+		pthread_mutex_unlock(&extents_mutex);
+		return extent_protocol::OK;
+	} else {
+		pthread_mutex_unlock(&extents_mutex);
+		return extent_protocol::NOENT;
+	}
+}
+
 int extent_server::remove(extent_protocol::extentid_t id, int &) {
-	// You fill this in for Lab 2.
-	return extent_protocol::IOERR;
+	pthread_mutex_lock(&extents_mutex);
+	if (extents.count(id) == 1) {
+		extents.erase(id);
+		pthread_mutex_unlock(&extents_mutex);
+		return extent_protocol::OK;
+	} else {
+		pthread_mutex_unlock(&extents_mutex);
+		return extent_protocol::NOENT;
+	}
 }
 
