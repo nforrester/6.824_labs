@@ -48,8 +48,9 @@ class yfs_client {
 		bool lookup(inum, const char*, fuse_entry_param*);
 		status create(inum, const char*, fuse_entry_param*);
 		status readdir(void (*dirbuf_add)(struct dirbuf*, const char*, fuse_ino_t), struct dirbuf*, inum);
-		status setsize(inum, unsigned long long);
-		std::string read(inum, unsigned long long, unsigned long long);
+		status setsize(inum, unsigned long long size);
+		std::string read(inum, unsigned long long size, unsigned long long offset);
+		void write(inum, unsigned long long size, unsigned long long offset, const char*);
 };
 
 #endif 

@@ -205,3 +205,22 @@ std::string yfs_client::read(inum finum, unsigned long long size, unsigned long 
 	}
 	return file_contents.substr(offset, size);
 }
+
+void yfs_client::write(inum finum, unsigned long long size, unsigned long long offset, const char *buf) {
+	std::string file_contents;
+	if (ec->get(finum, file_contents) != extent_protocol::OK) {
+		printf("failed to get contents of file!\n");
+		return;
+	}
+	if (offset + size > file_contents.size()) {
+		file_contents.erase(offset, file_contents.size());
+	}
+	if (offset > file_contents.size()) {
+		file_contents.insert(file_contents.size(), offset - file_contents.size(), 0);
+	}
+	if (offset == file_contents.size()) {
+		file_contents.insert(offset, buf, size);
+	} else {
+		file_contents.replace(offset, size, buf, size);
+	}
+}

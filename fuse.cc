@@ -186,7 +186,7 @@ void fuseserver_write(fuse_req_t req, fuse_ino_t ino,
                       struct fuse_file_info *fi) {
 	// You fill this in for Lab 2
 	printf("GOT HERE: write\n");
-#if 0
+#if 1
 	// Change the above line to "#if 1", and your code goes here
 	fuse_reply_write(req, size);
 #else
