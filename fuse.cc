@@ -217,7 +217,9 @@ yfs_client::status fuseserver_createhelper(fuse_ino_t parent, const char *name,
 	e->generation = 0;
 	// You fill this in for Lab 2
 	printf("GOT HERE: createhelper\n");
-	return yfs->create(parent, name, e);
+	yfs_client::status r = yfs->create(parent, name, e);
+	getattr(e->ino, e->attr);
+	return r;
 }
 
 void
