@@ -5,6 +5,7 @@
 //#include "yfs_protocol.h"
 #include "extent_client.h"
 #include <vector>
+#include <fuse/fuse_lowlevel.h>
 
 
 class yfs_client {
@@ -43,6 +44,9 @@ class yfs_client {
 
 		int getfile(inum, fileinfo &);
 		int getdir(inum, dirinfo &);
+
+		bool lookup(inum, const char*, fuse_entry_param*);
+		status create(inum, const char*, fuse_entry_param*);
 };
 
 #endif 

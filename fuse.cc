@@ -124,6 +124,7 @@ void fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
 		struct stat st;
 		// You fill this in for Lab 2
+		printf("GOT HERE: setattr\n");
 	#if 0
 		// Change the above line to "#if 1", and your code goes here
 		// Note: fill st using getattr before fuse_reply_attr
@@ -152,6 +153,7 @@ void fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 void fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                      off_t off, struct fuse_file_info *fi) {
 	// You fill this in for Lab 2
+	printf("GOT HERE: read\n");
 #if 0
 	std::string buf;
 	// Change the above "#if 0" to "#if 1", and your code goes here
@@ -180,6 +182,7 @@ void fuseserver_write(fuse_req_t req, fuse_ino_t ino,
                       const char *buf, size_t size, off_t off,
                       struct fuse_file_info *fi) {
 	// You fill this in for Lab 2
+	printf("GOT HERE: write\n");
 #if 0
 	// Change the above line to "#if 1", and your code goes here
 	fuse_reply_write(req, size);
@@ -213,7 +216,8 @@ yfs_client::status fuseserver_createhelper(fuse_ino_t parent, const char *name,
 	e->entry_timeout = 0.0;
 	e->generation = 0;
 	// You fill this in for Lab 2
-	return yfs_client::NOENT;
+	printf("GOT HERE: createhelper\n");
+	return yfs->create(parent, name, e);
 }
 
 void
@@ -262,6 +266,8 @@ void fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name) {
 	bool found = false;
 
 	// You fill this in for Lab 2
+	printf("GOT HERE: lookup(%llu %s)\n", (unsigned long long) parent, name);
+	found = yfs->lookup(parent, name, &e);
 	if (found) {
 		fuse_reply_entry(req, &e);
 	} else {
@@ -323,6 +329,7 @@ void fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 
 	// You fill this in for Lab 2
 
+	printf("GOT HERE: readdir\n");
 
 	reply_buf_limited(req, b.p, b.size, off, size);
 	free(b.p);

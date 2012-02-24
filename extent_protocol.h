@@ -5,6 +5,8 @@
 
 #include "rpc.h"
 
+#define ROOT_DIRECTORY_ID 0x00000001
+
 class extent_protocol {
 	public:
 		typedef int status;

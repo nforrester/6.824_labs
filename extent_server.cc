@@ -24,6 +24,10 @@ extent::extent(std::string buffer, extent_protocol::attr attributes) {
 
 extent_server::extent_server() {
 	pthread_mutex_init(&extents_mutex, NULL);
+	pthread_mutex_lock(&extents_mutex);
+	extent ext;
+	extents[ROOT_DIRECTORY_ID] = ext;
+	pthread_mutex_unlock(&extents_mutex);
 }
 
 int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &) {
