@@ -9,6 +9,14 @@
 #include <fcntl.h>
 #include <pthread.h>
 
+extent::extent() {
+	unsigned int now = time(NULL);
+	a.atime = now;
+	a.mtime = now;
+	a.ctime = now;
+	a.size = 0;
+}
+
 extent::extent(std::string buffer, extent_protocol::attr attributes) {
 	buf = buffer;
 	a = attributes;
@@ -19,7 +27,7 @@ extent_server::extent_server() {
 }
 
 int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &) {
-	unsigned int now = time();
+	unsigned int now = time(NULL);
 	extent_protocol::attr a;
 	a.atime = now;
 	a.mtime = now;
@@ -33,7 +41,7 @@ int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &) {
 }
 
 int extent_server::get(extent_protocol::extentid_t id, std::string &buf) {
-	unsigned int now = time();
+	unsigned int now = time(NULL);
 	pthread_mutex_lock(&extents_mutex);
 	if (extents.count(id) == 1) {
 		buf = extents[id].buf;
