@@ -108,7 +108,7 @@ bool yfs_client::lookup(inum parent, const char *name, fuse_entry_param *e) {
 	return false;
 }
 
-yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_param *e) {
+yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_param *e, int mkdir) {
 	fuse_entry_param e_tmp;
 	extent_protocol::attr a_tmp;
 	inum finum;
@@ -121,6 +121,9 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 	do {
 		finum = random();
 		finum |= 0x80000000;
+		if (mkdir) {
+			finum = ~finum;
+		}
 	} while (ec->getattr(finum, a_tmp) != extent_protocol::NOENT);
 
 	if (ec->put(finum, std::string()) != extent_protocol::OK) {

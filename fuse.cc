@@ -124,17 +124,11 @@ void fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
 		struct stat st;
 		// You fill this in for Lab 2
-	#if 1
 		printf("GOT HERE: setattr\n");
-		// Change the above line to "#if 1", and your code goes here
 		yfs->setsize(ino, attr->st_size);
 		// Note: fill st using getattr before fuse_reply_attr
 		getattr(ino, st);
 		fuse_reply_attr(req, &st, 0);
-	#else
-		fuse_reply_err(req, ENOSYS);
-	#endif
-
 	} else {
 		fuse_reply_err(req, ENOSYS);
 	}
@@ -156,14 +150,9 @@ void fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                      off_t off, struct fuse_file_info *fi) {
 	// You fill this in for Lab 2
 	printf("GOT HERE: read\n");
-#if 1
 	std::string buf;
-	// Change the above "#if 0" to "#if 1", and your code goes here
 	buf = yfs->read(ino, size, off);
 	fuse_reply_buf(req, buf.data(), buf.size());
-#else
-	fuse_reply_err(req, ENOSYS);
-#endif
 }
 
 //
@@ -186,13 +175,8 @@ void fuseserver_write(fuse_req_t req, fuse_ino_t ino,
                       struct fuse_file_info *fi) {
 	// You fill this in for Lab 2
 	printf("GOT HERE: write\n");
-#if 1
-	// Change the above line to "#if 1", and your code goes here
 	yfs->write(ino, size, off, buf);
 	fuse_reply_write(req, size);
-#else
-	fuse_reply_err(req, ENOSYS);
-#endif
 }
 
 //
@@ -221,7 +205,7 @@ yfs_client::status fuseserver_createhelper(fuse_ino_t parent, const char *name,
 	e->generation = 0;
 	// You fill this in for Lab 2
 	printf("GOT HERE: createhelper\n");
-	yfs_client::status r = yfs->create(parent, name, e);
+	yfs_client::status r = yfs->create(parent, name, e, 0);
 	getattr(e->ino, e->attr);
 	return r;
 }
@@ -384,6 +368,9 @@ void fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_
 	// You fill this in for Lab 3
 #if 0
 	fuse_reply_entry(req, &e);
+	printf("GOT HERE: createhelper\n");
+	yfs_client::status r = yfs->create(parent, name, e, 0);
+	getattr(e->ino, e->attr);
 #else
 	fuse_reply_err(req, ENOSYS);
 #endif
