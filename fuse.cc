@@ -362,18 +362,17 @@ void fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_
 	e.attr_timeout = 0.0;
 	e.entry_timeout = 0.0;
 	e.generation = 0;
-	// Suppress compiler warning of unused e.
-	(void) e;
 
 	// You fill this in for Lab 3
-#if 0
-	fuse_reply_entry(req, &e);
-	printf("GOT HERE: createhelper\n");
-	yfs_client::status r = yfs->create(parent, name, e, 0);
-	getattr(e->ino, e->attr);
-#else
-	fuse_reply_err(req, ENOSYS);
-#endif
+	printf("GOT HERE: mkdir\n");
+	yfs_client::status r = yfs->create(parent, name, &e, 1);
+
+	if (r == yfs_client::EXIST) {
+		fuse_reply_err(req, EEXIST);
+	} else {
+		getattr(e.ino, e.attr);
+		fuse_reply_entry(req, &e);
+	}
 }
 
 //
@@ -383,10 +382,7 @@ void fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_
 //
 // Do *not* allow unlinking of a directory.
 //
-void
-fuseserver_unlink(fuse_req_t req, fuse_ino_t parent, const char *name)
-{
-
+void fuseserver_unlink(fuse_req_t req, fuse_ino_t parent, const char *name) {
 	// You fill this in for Lab 3
 	// Success:	fuse_reply_err(req, 0);
 	// Not found:	fuse_reply_err(req, ENOENT);
