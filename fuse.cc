@@ -117,25 +117,27 @@ fuseserver_getattr(fuse_req_t req, fuse_ino_t ino,
 // On success, call fuse_reply_attr, passing the file's new
 // attributes (from a call to getattr()).
 //
-void
-fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
-                   int to_set, struct fuse_file_info *fi)
-{
-  printf("fuseserver_setattr 0x%x\n", to_set);
-  if (FUSE_SET_ATTR_SIZE & to_set) {
-    printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
-    struct stat st;
-    // You fill this in for Lab 2
-#if 0
-    // Change the above line to "#if 1", and your code goes here
-    // Note: fill st using getattr before fuse_reply_attr
-    fuse_reply_attr(req, &st, 0);
-#else
-    fuse_reply_err(req, ENOSYS);
-#endif
-  } else {
-    fuse_reply_err(req, ENOSYS);
-  }
+void fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
+                        int to_set, struct fuse_file_info *fi) {
+	printf("fuseserver_setattr 0x%x\n", to_set);
+	if (FUSE_SET_ATTR_SIZE & to_set) {
+		printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
+		struct stat st;
+		// You fill this in for Lab 2
+	#if 1
+		printf("GOT HERE: setattr\n");
+		// Change the above line to "#if 1", and your code goes here
+		yfs->setsize(ino, attr->st_size);
+		// Note: fill st using getattr before fuse_reply_attr
+		getattr(ino, st);
+		fuse_reply_attr(req, &st, 0);
+	#else
+		fuse_reply_err(req, ENOSYS);
+	#endif
+
+	} else {
+		fuse_reply_err(req, ENOSYS);
+	}
 }
 
 //
@@ -150,17 +152,17 @@ fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 // @req identifies this request, and is used only to send a 
 // response back to fuse with fuse_reply_buf or fuse_reply_err.
 //
-void
-fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
-                off_t off, struct fuse_file_info *fi)
-{
-  // You fill this in for Lab 2
-#if 0
-  std::string buf;
-  // Change the above "#if 0" to "#if 1", and your code goes here
-  fuse_reply_buf(req, buf.data(), buf.size());
+void fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
+                     off_t off, struct fuse_file_info *fi) {
+	// You fill this in for Lab 2
+	printf("GOT HERE: read\n");
+#if 1
+	std::string buf;
+	// Change the above "#if 0" to "#if 1", and your code goes here
+	buf = yfs->read(ino, size, off);
+	fuse_reply_buf(req, buf.data(), buf.size());
 #else
-  fuse_reply_err(req, ENOSYS);
+	fuse_reply_err(req, ENOSYS);
 #endif
 }
 
@@ -179,17 +181,17 @@ fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
 // @req identifies this request, and is used only to send a 
 // response back to fuse with fuse_reply_buf or fuse_reply_err.
 //
-void
-fuseserver_write(fuse_req_t req, fuse_ino_t ino,
-                 const char *buf, size_t size, off_t off,
-                 struct fuse_file_info *fi)
-{
-  // You fill this in for Lab 2
-#if 0
-  // Change the above line to "#if 1", and your code goes here
-  fuse_reply_write(req, size);
+void fuseserver_write(fuse_req_t req, fuse_ino_t ino,
+                      const char *buf, size_t size, off_t off,
+                      struct fuse_file_info *fi) {
+	// You fill this in for Lab 2
+	printf("GOT HERE: write\n");
+#if 1
+	// Change the above line to "#if 1", and your code goes here
+	yfs->write(ino, size, off, buf);
+	fuse_reply_write(req, size);
 #else
-  fuse_reply_err(req, ENOSYS);
+	fuse_reply_err(req, ENOSYS);
 #endif
 }
 
@@ -211,16 +213,17 @@ fuseserver_write(fuse_req_t req, fuse_ino_t ino,
 //
 // @return yfs_client::OK on success, and EXIST if @name already exists.
 //
-yfs_client::status
-fuseserver_createhelper(fuse_ino_t parent, const char *name,
-                        mode_t mode, struct fuse_entry_param *e)
-{
-  // In yfs, timeouts are always set to 0.0, and generations are always set to 0
-  e->attr_timeout = 0.0;
-  e->entry_timeout = 0.0;
-  e->generation = 0;
-  // You fill this in for Lab 2
-  return yfs_client::NOENT;
+yfs_client::status fuseserver_createhelper(fuse_ino_t parent, const char *name,
+                                           mode_t mode, struct fuse_entry_param *e) {
+	// In yfs, timeouts are always set to 0.0, and generations are always set to 0
+	e->attr_timeout = 0.0;
+	e->entry_timeout = 0.0;
+	e->generation = 0;
+	// You fill this in for Lab 2
+	printf("GOT HERE: createhelper\n");
+	yfs_client::status r = yfs->create(parent, name, e);
+	getattr(e->ino, e->attr);
+	return r;
 }
 
 void
@@ -230,8 +233,15 @@ fuseserver_create(fuse_req_t req, fuse_ino_t parent, const char *name,
   struct fuse_entry_param e;
   yfs_client::status ret;
   if( (ret = fuseserver_createhelper( parent, name, mode, &e )) == yfs_client::OK ) {
+    printf("hello world yay\n");
+    printf("fscreate e.ino: %lu\n", (unsigned long) e.ino);
+    printf("fscreate e.atrr.st_size: %lu\n", (unsigned long) e.attr.st_size);
+    printf("fscreate e.atrr.st_atime: %lu\n", (unsigned long) e.attr.st_atime);
+    printf("fscreate e.atrr.st_mtime: %lu\n", (unsigned long) e.attr.st_mtime);
+    printf("fscreate e.atrr.st_ctime: %lu\n", (unsigned long) e.attr.st_ctime);
     fuse_reply_create(req, &e, fi);
   } else {
+    printf("hello world fuck\n");
 		if (ret == yfs_client::EXIST) {
 			fuse_reply_err(req, EEXIST);
 		}else{
@@ -245,8 +255,10 @@ void fuseserver_mknod( fuse_req_t req, fuse_ino_t parent,
   struct fuse_entry_param e;
   yfs_client::status ret;
   if( (ret = fuseserver_createhelper( parent, name, mode, &e )) == yfs_client::OK ) {
+    printf("hello world yay2\n");
     fuse_reply_entry(req, &e);
   } else {
+    printf("hello world fuck2\n");
 		if (ret == yfs_client::EXIST) {
 			fuse_reply_err(req, EEXIST);
 		}else{
@@ -260,21 +272,23 @@ void fuseserver_mknod( fuse_req_t req, fuse_ino_t parent,
 // found, set e.attr (using getattr) and e.ino to the attribute and inum of
 // the file.
 //
-void
-fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
-{
-  struct fuse_entry_param e;
-  // In yfs, timeouts are always set to 0.0, and generations are always set to 0
-  e.attr_timeout = 0.0;
-  e.entry_timeout = 0.0;
-  e.generation = 0;
-  bool found = false;
+void fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name) {
+	struct fuse_entry_param e;
+	// In yfs, timeouts are always set to 0.0, and generations are always set to 0
+	e.attr_timeout = 0.0;
+	e.entry_timeout = 0.0;
+	e.generation = 0;
+	bool found = false;
 
-  // You fill this in for Lab 2
-  if (found)
-    fuse_reply_entry(req, &e);
-  else
-    fuse_reply_err(req, ENOENT);
+	// You fill this in for Lab 2
+	printf("GOT HERE: lookup(%llu %s)\n", (unsigned long long) parent, name);
+	found = yfs->lookup(parent, name, &e);
+	getattr(e.ino, e.attr);
+	if (found) {
+		fuse_reply_entry(req, &e);
+	} else {
+		fuse_reply_err(req, ENOENT);
+	}
 }
 
 
@@ -314,28 +328,30 @@ int reply_buf_limited(fuse_req_t req, const char *buf, size_t bufsize,
 //
 // Call dirbuf_add(&b, name, inum) for each entry in the directory.
 //
-void
-fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
-                   off_t off, struct fuse_file_info *fi)
-{
-  yfs_client::inum inum = ino; // req->in.h.nodeid;
-  struct dirbuf b;
+void fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
+                        off_t off, struct fuse_file_info *fi) {
+	yfs_client::inum inum = ino; // req->in.h.nodeid;
+	struct dirbuf b;
 
-  printf("fuseserver_readdir\n");
+	printf("fuseserver_readdir\n");
+	fflush(stdout);
 
-  if(!yfs->isdir(inum)){
-    fuse_reply_err(req, ENOTDIR);
-    return;
-  }
+	if(!yfs->isdir(inum)){
+		fuse_reply_err(req, ENOTDIR);
+		return;
+	}
 
-  memset(&b, 0, sizeof(b));
-
-
-  // You fill this in for Lab 2
+	memset(&b, 0, sizeof(b));
 
 
-  reply_buf_limited(req, b.p, b.size, off, size);
-  free(b.p);
+	// You fill this in for Lab 2
+
+	printf("GOT HERE: readdir\n");
+
+	yfs->readdir(&dirbuf_add, &b, ino);
+
+	reply_buf_limited(req, b.p, b.size, off, size);
+	free(b.p);
 }
 
 
