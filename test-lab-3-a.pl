@@ -28,24 +28,15 @@ if(mkdir($dir, 0777) == 0){
 my $files = { };
 my @dead;
 
-dircheck();
 createone();
-dircheck();
 deleteone();
-dircheck();
 createone();
-dircheck();
 checkmtime();
-dircheck();
 checkdirmtime();
-dircheck();
 
 for($iters = 0; $iters < 10; $iters++){
     createone();
-    dircheck();
 }
-
-dircheck();
 
 for($iters = 0; $iters < 50; $iters++){
     if(rand() < 0.2){
@@ -102,7 +93,6 @@ sub dircheck {
             oops1("$f occurs twice in directory");
         }
         $h{$f} = 1;
-        print "$f is in directory\n";
     }
     closedir(D);
 
@@ -110,7 +100,6 @@ sub dircheck {
         if(!defined($h{$f})){
             oops1("$f is not in directory listing");
         }
-        print "$f is in directory listing correctly\n";
     }
 
     foreach $f (@dead){
