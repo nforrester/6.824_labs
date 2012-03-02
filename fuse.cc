@@ -365,9 +365,8 @@ void fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_
 
 	// You fill this in for Lab 3
 	printf("GOT HERE: mkdir\n");
-	yfs_client::status r = yfs->create(parent, name, &e, 1);
-
-	if (r == yfs_client::EXIST) {
+	
+	if (yfs->create(parent, name, &e, 1) == yfs_client::EXIST) {
 		fuse_reply_err(req, EEXIST);
 	} else {
 		getattr(e.ino, e.attr);
@@ -384,9 +383,14 @@ void fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_
 //
 void fuseserver_unlink(fuse_req_t req, fuse_ino_t parent, const char *name) {
 	// You fill this in for Lab 3
-	// Success:	fuse_reply_err(req, 0);
-	// Not found:	fuse_reply_err(req, ENOENT);
-	fuse_reply_err(req, ENOSYS);
+	printf("GOT HERE: unlink\n");
+	if (yfs->unlink(parent, name) == yfs_client::NOENT) {
+		// Not found:	fuse_reply_err(req, ENOENT);
+		fuse_reply_err(req, ENOENT);
+	} else {
+		// Success:	fuse_reply_err(req, 0);
+		fuse_reply_err(req, 0);
+	}
 }
 
 void

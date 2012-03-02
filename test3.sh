@@ -8,20 +8,20 @@ echo ""
 echo ""
 echo "----------- ENDING TEST A ------------"
 echo ""
-echo ""
-echo "---------- BEGINNING TEST B ----------"
-echo ""
-./test-lab-3-b.pl ./yfs1 ./yfs2
-echo ""
-echo "----------- ENDING TEST B ------------"
-echo ""
-echo ""
-echo "---------- BEGINNING TEST C ----------"
-echo ""
-./test-lab-3-c ./yfs1 ./yfs2
-echo ""
-echo "----------- ENDING TEST C ------------"
-echo ""
+#echo ""
+#echo "---------- BEGINNING TEST B ----------"
+#echo ""
+#./test-lab-3-b ./yfs1 ./yfs2
+#echo ""
+#echo "----------- ENDING TEST B ------------"
+#echo ""
+#echo ""
+#echo "---------- BEGINNING TEST C ----------"
+#echo ""
+#./test-lab-3-c ./yfs1 ./yfs2
+#echo ""
+#echo "----------- ENDING TEST C ------------"
+#echo ""
 ./stop.sh
 ./stop.sh
 ./stop.sh

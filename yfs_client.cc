@@ -91,19 +91,28 @@ bool yfs_client::lookup(inum parent, const char *name, fuse_entry_param *e) {
 	std::string dir_contents;
 	if (ec->get(parent, dir_contents) == extent_protocol::OK) {
 		std::istringstream dc(dir_contents, std::istringstream::in);
-		inum finum = 0;
+		inum finum = -1, prev_finum;
 		char fname[MAX_FILENAME_LEN];
 		fname[0] = 0;
+		printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dir_contents.c_str());
+		printf("LOOKUP SEARCH BEGIN\n");
 		while (!dc.eof()) {
+			prev_finum = finum;
 			dc >> finum;
 			dc.getline(fname, MAX_FILENAME_LEN); // call once to strip newline
 			dc.getline(fname, MAX_FILENAME_LEN);
+			if (finum == prev_finum && 0 == strncmp("", fname, MAX_FILENAME_LEN)) {
+				break;
+			}
+			printf("file(%llu, \"%s\")\n", finum, fname);
 			if (strncmp(name, fname, MAX_FILENAME_LEN) == 0) {
 				printf("lookup finum: %llu\n", (unsigned long long) finum);
 				e->ino = finum;
+				printf("LOOKUP SEARCH END GOOD\n");
 				return true;
 			}
 		}
+		printf("LOOKUP SEARCH END BAD\n");
 	}
 	return false;
 }
@@ -160,6 +169,65 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 	return OK;
 }
 
+yfs_client::status yfs_client::unlink(inum parent, const char *name) {
+	fuse_entry_param e_tmp;
+	inum finum, prev_finum;
+	char fname[MAX_FILENAME_LEN];
+	int cmp;
+
+	if (!lookup(parent, name, &e_tmp)) {
+		printf("file does not exist!\n");
+		return NOENT;
+	}
+
+	std::string dir_contents_old;
+	std::string dir_contents_new;
+	if (ec->get(parent, dir_contents_old) != extent_protocol::OK) {
+		printf("failed to get parent directory contents!\n");
+		return NOENT;
+	}
+
+	std::istringstream dco(dir_contents_old, std::istringstream::in);
+	std::ostringstream dcn(dir_contents_new, std::ostringstream::out | std::ostringstream::trunc);
+
+	printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dir_contents_old.c_str());
+	printf("UNLINK SEARCH BEGIN\n");
+	finum = -1;
+	while (!dco.eof()) {
+		prev_finum = finum;
+		dco >> finum;
+		dco.getline(fname, MAX_FILENAME_LEN); // call once to strip newline
+		dco.getline(fname, MAX_FILENAME_LEN);
+		if (finum == prev_finum && 0 == strncmp("", fname, MAX_FILENAME_LEN)) {
+			break;
+		}
+		cmp = strncmp(name, fname, MAX_FILENAME_LEN);
+		printf("file(%llu, \"%s\") - ", finum, fname);
+		if (cmp != 0){
+			printf("NOT IT!\n");
+			// If this isn't the file we're deleting
+			dcn << finum << std::endl;
+			dcn << fname << std::endl;
+		} else {
+			printf("DIE! DIE! DIE!\n");
+			if (ec->remove(finum) != extent_protocol::OK) {
+				printf("failed to delete file for some odd reason!\n");
+				return NOENT;
+			}
+		}
+	}
+	printf("UNLINK SEARCH END\n");
+	printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dcn.str().c_str());
+
+	if (ec->put(parent, dcn.str()) != extent_protocol::OK) {
+		printf("failed to put parent directory contents!\n");
+		return NOENT;
+	}
+	
+	printf("everything is hunky dory!\n");
+	return OK;
+}
+
 yfs_client::status yfs_client::readdir(void (*dirbuf_add)(struct dirbuf*, const char*, fuse_ino_t), struct dirbuf *b, inum dir_inum) {
 	std::string dir_contents;
 	if (ec->get(dir_inum, dir_contents) != extent_protocol::OK) {
@@ -167,15 +235,26 @@ yfs_client::status yfs_client::readdir(void (*dirbuf_add)(struct dirbuf*, const 
 		return NOENT;
 	}
 
-	std::istringstream dc(dir_contents, std::istringstream::in);
-	inum finum = 0;
-	char fname[MAX_FILENAME_LEN];
-	fname[0] = 0;
-	while (!dc.eof()) {
-		dc >> finum;
-		dc.getline(fname, MAX_FILENAME_LEN); // call once to strip newline
-		dc.getline(fname, MAX_FILENAME_LEN);
-		(*dirbuf_add)(b, fname, finum);
+	printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dir_contents.c_str());
+
+	if (dir_contents.compare("") == 0) {
+		printf("DIRECTORY EMPTY\n");
+	} else {
+		std::istringstream dc(dir_contents, std::istringstream::in);
+		inum finum = -1, prev_finum;
+		char fname[MAX_FILENAME_LEN];
+		fname[0] = 0;
+		while (!dc.eof()) {
+			prev_finum = finum;
+			dc >> finum;
+			dc.getline(fname, MAX_FILENAME_LEN); // call once to strip newline
+			dc.getline(fname, MAX_FILENAME_LEN);
+			if (finum == prev_finum && 0 == strncmp("", fname, MAX_FILENAME_LEN)) {
+				break;
+			}
+			printf("DIRECTORY ENTRY(%llu, \"%s\")\n", finum, fname);
+			(*dirbuf_add)(b, fname, finum);
+		}
 	}
 	return OK;
 }
