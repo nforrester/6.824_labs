@@ -1,5 +1,7 @@
 #!/bin/bash
 
+make
+
 ./start.sh
 echo ""
 echo "---------- BEGINNING TEST A ----------"
