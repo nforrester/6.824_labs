@@ -223,7 +223,7 @@ yfs_client::status yfs_client::unlink(inum parent, const char *name) {
 		printf("failed to put parent directory contents!\n");
 		return NOENT;
 	}
-	
+
 	printf("everything is hunky dory!\n");
 	return OK;
 }

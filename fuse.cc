@@ -365,7 +365,7 @@ void fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_
 
 	// You fill this in for Lab 3
 	printf("GOT HERE: mkdir\n");
-	
+
 	if (yfs->create(parent, name, &e, 1) == yfs_client::EXIST) {
 		fuse_reply_err(req, EEXIST);
 	} else {
