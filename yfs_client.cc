@@ -16,6 +16,7 @@
 
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst) {
 	ec = new extent_client(extent_dst);
+	lc = new lock_client(lock_dst);
 }
 
 yfs_client::inum yfs_client::n2i(std::string n) {
@@ -121,22 +122,33 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 	fuse_entry_param e_tmp;
 	extent_protocol::attr a_tmp;
 	inum finum;
+	int file_locked = 0;
 
+	lc->acquire(parent);
+	
 	if (lookup(parent, name, &e_tmp)) {
 		printf("file exists!\n");
+		lc->release(parent);
 		return EXIST;
 	}
 
 	do {
+		if (file_locked) {
+			lc->release(finum);
+		}
 		finum = random();
 		finum |= 0x80000000;
 		if (mkdir) {
 			finum = ~finum;
 		}
+		lc->acquire(finum);
+		file_locked = 1;
 	} while (ec->getattr(finum, a_tmp) != extent_protocol::NOENT);
 
 	if (ec->put(finum, std::string()) != extent_protocol::OK) {
 		printf("failed to create extent!\n");
+		lc->release(finum);
+		lc->release(parent);
 		return NOENT;
 	}
 
@@ -146,6 +158,8 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 		if (ec->remove(finum) != extent_protocol::OK) {
 			printf("failed to remove orphan extent! FUCK!\n");
 		}
+		lc->release(finum);
+		lc->release(parent);
 		return NOENT;
 	}
 
@@ -158,6 +172,8 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 		if (ec->remove(finum) != extent_protocol::OK) {
 			printf("failed to remove orphan extent! FUCK!\n");
 		}
+		lc->release(finum);
+		lc->release(parent);
 		return NOENT;
 	}
 	
@@ -166,6 +182,8 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 	printf("create e->ino: %lu\n", (unsigned long) e->ino);
 
 	printf("everything is hunky dory!\n");
+	lc->release(finum);
+	lc->release(parent);
 	return OK;
 }
 
@@ -175,8 +193,11 @@ yfs_client::status yfs_client::unlink(inum parent, const char *name) {
 	char fname[MAX_FILENAME_LEN];
 	int cmp;
 
+	lc->acquire(parent);
+
 	if (!lookup(parent, name, &e_tmp)) {
 		printf("file does not exist!\n");
+		lc->release(parent);
 		return NOENT;
 	}
 
@@ -184,6 +205,7 @@ yfs_client::status yfs_client::unlink(inum parent, const char *name) {
 	std::string dir_contents_new;
 	if (ec->get(parent, dir_contents_old) != extent_protocol::OK) {
 		printf("failed to get parent directory contents!\n");
+		lc->release(parent);
 		return NOENT;
 	}
 
@@ -209,11 +231,15 @@ yfs_client::status yfs_client::unlink(inum parent, const char *name) {
 			dcn << finum << std::endl;
 			dcn << fname << std::endl;
 		} else {
+			lc->acquire(finum);
 			printf("DIE! DIE! DIE!\n");
 			if (ec->remove(finum) != extent_protocol::OK) {
 				printf("failed to delete file for some odd reason!\n");
+				lc->release(finum);
+				lc->release(parent);
 				return NOENT;
 			}
+			lc->release(finum);
 		}
 	}
 	printf("UNLINK SEARCH END\n");
@@ -221,10 +247,12 @@ yfs_client::status yfs_client::unlink(inum parent, const char *name) {
 
 	if (ec->put(parent, dcn.str()) != extent_protocol::OK) {
 		printf("failed to put parent directory contents!\n");
+		lc->release(parent);
 		return NOENT;
 	}
 
 	printf("everything is hunky dory!\n");
+	lc->release(parent);
 	return OK;
 }
 
@@ -260,24 +288,29 @@ yfs_client::status yfs_client::readdir(void (*dirbuf_add)(struct dirbuf*, const 
 }
 
 yfs_client::status yfs_client::setsize(inum finum, unsigned long long size) {
+	lc->acquire(finum);
 	if (size == 0) {
 		// we don't care what was there before, saves some rpc calls
 		if (ec->put(finum, std::string()) != extent_protocol::OK) {
 			printf("failed to truncate file!\n");
+			lc->release(finum);
 			return IOERR;
 		}
 	} else {
 		std::string file_contents;
 		if (ec->get(finum, file_contents) != extent_protocol::OK) {
 			printf("failed to get contents of file!\n");
+			lc->release(finum);
 			return IOERR;
 		}
 		file_contents.resize(size, 0);
 		if (ec->put(finum, file_contents) != extent_protocol::OK) {
 			printf("failed to put contents of file!\n");
+			lc->release(finum);
 			return IOERR;
 		}
 	}
+	lc->release(finum);
 	return OK;
 }
 
@@ -300,8 +333,10 @@ std::string yfs_client::read(inum finum, unsigned long long size, unsigned long 
 void yfs_client::write(inum finum, unsigned long long size, unsigned long long offset, const char *buf) {
 	printf("WRITE(%llu, %llu, %llu):\nBEGIN WRITE:\n%s\nEND WRITE\n", finum, size, offset, buf);
 	std::string file_contents;
+	lc->acquire(finum);
 	if (ec->get(finum, file_contents) != extent_protocol::OK) {
 		printf("failed to get contents of file!\n");
+		lc->release(finum);
 		return;
 	}
 	printf("gotten contents\n");
@@ -321,7 +356,9 @@ void yfs_client::write(inum finum, unsigned long long size, unsigned long long o
 	printf("written\n");
 	if (ec->put(finum, file_contents) != extent_protocol::OK) {
 		printf("failed to put contents of file!\n");
+		lc->release(finum);
 		return;
 	}
 	printf("everything hunky dory!\n");
+	lc->release(finum);
 }

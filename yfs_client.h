@@ -2,7 +2,6 @@
 #define yfs_client_h
 
 #include <string>
-//#include "yfs_protocol.h"
 #include "extent_client.h"
 #include <vector>
 #include <fuse/fuse_lowlevel.h>
@@ -12,6 +11,7 @@
 
 class yfs_client {
 		extent_client *ec;
+		lock_client *lc;
 
 	public:
 		typedef unsigned long long inum;
