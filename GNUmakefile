@@ -138,3 +138,6 @@ handin:
 
 lock_client_diagram.png: lock_client_diagram.dot
 	dot -Tpng lock_client_diagram.dot -o lock_client_diagram.png
+lock_client_design.pdf: lock_client_design.tex lock_client_diagram.png
+	pdflatex lock_client_design.tex
+	pdflatex lock_client_design.tex
