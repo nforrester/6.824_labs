@@ -135,3 +135,6 @@ handin:
 	@bash -c "cd ../; tar -X <(tr ' ' '\n' < <(echo '$(handin_ignore)')) -czvf $(handin_file) $(labdir); mv $(handin_file) $(labdir); cd $(labdir)"
 	@echo Please email $(handin_file) to 6.824-submit@pdos.csail.mit.edu
 	@echo Thanks!
+
+lock_client_diagram.png: lock_client_diagram.dot
+	dot -Tpng lock_client_diagram.dot -o lock_client_diagram.png

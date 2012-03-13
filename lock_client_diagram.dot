@@ -1,0 +1,6 @@
+digraph Client {
+	none -> acquiring -> locked;
+	locked -> releasing -> none;
+	locked -> free -> none;
+	free -> locked;
+}
