@@ -140,4 +140,4 @@ lock_protocol_diagram.png: lock_protocol_diagram.dot
 	dot -Tpng lock_protocol_diagram.dot -o lock_protocol_diagram.png
 lock_protocol_design.pdf: lock_protocol_design.tex lock_protocol_diagram.png
 	pdflatex lock_protocol_design.tex
-	pdflatex lock_client_design.tex
+	pdflatex lock_protocol_design.tex
