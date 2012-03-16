@@ -1,9 +1,9 @@
 digraph Client {
-	none -> acquiring [color=red, style=dashed];
-	acquiring -> locked [color=green, style=dashed];
-	locked -> releasing [color=blue, style=dotted];
-	releasing -> none [color=orange, style=dotted];
-	free -> none [color=blue, style=dotted];
+	none -> acquiring [color=red, style=dashed, label="Q"];
+	acquiring -> locked [color=green, style=dotted, label="P"];
+	locked -> releasing [color=blue, style=dotted, label="Q"];
+	releasing -> none [color=orange, style=dashed, label="P"];
+	free -> none [color=blue, style=dotted, label="QP"];
 	locked -> free [color=orange];
 	free -> locked [color=red];
 }
