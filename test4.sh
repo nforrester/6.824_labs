@@ -1,9 +1,10 @@
 #!/bin/bash
 
 export RPC_COUNT=25
+export LAB=3
 
 make clean
-make --makefile=GNUmakefileLab3Compare
+make -e
 
 ./start.sh
 echo ""
@@ -20,8 +21,10 @@ echo ""
 mv lock_server.log lock_server3.log
 mv extent_server.log extent_server3.log
 
+export LAB=4
+
 make clean
-make
+make -e
 
 ./start.sh
 echo ""
@@ -56,3 +59,4 @@ rm lock_server4.log
 make clean
 
 unset RPC_COUNT
+unset LAB
