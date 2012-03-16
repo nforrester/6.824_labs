@@ -48,4 +48,11 @@ grep STATS lock_server3.log | tail -n1
 echo "Lock server lab 4:"
 grep STATS lock_server4.log | tail -n1
 
+rm extent_server3.log
+rm extent_server4.log
+rm lock_server3.log
+rm lock_server4.log
+
+make clean
+
 unset RPC_COUNT

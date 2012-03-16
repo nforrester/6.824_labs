@@ -122,7 +122,7 @@ fuse.o: fuse.cc
 -include *.d
 -include rpc/*.d
 
-clean_files=rpc/rpctest rpc/*.o rpc/*.d rpc/librpc.a *.o *.d yfs_client extent_server lock_server lock_tester lock_demo rpctest test-lab-3-b test-lab-3-c rsm_tester extent_server.log lock_server.log yfs_client1.log yfs_client2.log *-lab*.tgz yfs1 yfs2 lock_protocol_diagram.png lock_protocol_design.pdf lock_protocol_design.log lock_protocol_design.aux
+clean_files=rpc/rpctest rpc/*.o rpc/*.d rpc/librpc.a *.o *.d yfs_client extent_server lock_server lock_tester lock_demo rpctest test-lab-3-b test-lab-3-c rsm_tester extent_server.log lock_server.log yfs_client1.log yfs_client2.log *-lab*.tgz yfs1 yfs2 lock_protocol_diagram.png lock_protocol_design.pdf lock_protocol_design.log lock_protocol_design.aux core.*
 .PHONY: clean handin
 clean: 
 	rm $(clean_files) -rf 
