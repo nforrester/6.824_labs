@@ -1,0 +1,26 @@
+%\documentclass[12pt,doublespacing]{article}
+%\usepackage{fullpage,setspace,longtable,amsmath}
+\documentclass{article}
+\usepackage{graphicx,subfig,amsmath}
+\title{Caching Lock Protocol Design}
+\author{Neil Forrester\\6.824}
+\begin{document}
+
+\includegraphics[scale=0.5]{lock_protocol_diagram.png}
+
+\begin{tabular}{r | l}
+red & client acquires \\
+orange & client releases \\
+\hline
+blue & server revokes \\
+green & server grants \\
+\hline
+solid & no RPC calls \\
+dashed & client RPC server \\
+dotted & server RPC client \\
+\hline
+C & call \\
+R & return \\
+\end{tabular}
+
+\end{document}
