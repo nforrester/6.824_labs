@@ -575,20 +575,8 @@ rpcs::dispatch(djob_t *j)
 			}
 		}
 
-		std::cout << "CD&U: " << h.clt_nonce << " " << h.xid << " " << h.xid_rep << std::endl;
 		stat = checkduplicate_and_update(h.clt_nonce, h.xid,
                                                  h.xid_rep, &b1, &sz1);
-		if (stat == NEW) {
-			std::cout << "CD&U RET: NEW\n";
-		} else if (stat == INPROGRESS) {
-			std::cout << "CD&U RET: INPROGRESS\n";
-		} else if (stat == DONE) {
-			std::cout << "CD&U RET: DONE " << sz1 << std::endl;
-		} else if (stat == FORGOTTEN) {
-			std::cout << "CD&U RET: FORGOTTEN\n";
-		} else {
-			std::cout << "CD&U RET: FUCK\n";
-		}
 	} else {
 		// this client does not require at most once logic
 		stat = NEW;

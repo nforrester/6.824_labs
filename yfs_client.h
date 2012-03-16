@@ -7,11 +7,20 @@
 #include <fuse/fuse_lowlevel.h>
 
 #include "lock_protocol.h"
-#include "lock_client.h"
+
+#if LAB <= 3
+	#include "lock_client.h"
+#else
+	#include "lock_client_cache.h"
+#endif
 
 class yfs_client {
 		extent_client *ec;
-		lock_client *lc;
+		#if LAB <= 3
+			lock_client *lc;
+		#else
+			lock_client_cache *lc;
+		#endif
 
 	public:
 		typedef unsigned long long inum;

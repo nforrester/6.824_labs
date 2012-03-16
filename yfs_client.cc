@@ -16,7 +16,11 @@
 
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst) {
 	ec = new extent_client(extent_dst);
-	lc = new lock_client(lock_dst);
+	#if LAB <= 3
+		lc = new lock_client(lock_dst);
+	#else
+		lc = new lock_client_cache(lock_dst);
+	#endif
 }
 
 yfs_client::inum yfs_client::n2i(std::string n) {
