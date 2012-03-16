@@ -20,6 +20,7 @@ echo ""
 mv lock_server.log lock_server3.log
 mv extent_server.log extent_server3.log
 
+make clean
 make
 
 ./start.sh
