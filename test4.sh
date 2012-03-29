@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export RPC_COUNT=25
+export RPC_COUNT=1
 export LAB=3
 
 make clean
