@@ -15,6 +15,9 @@ lock_client::lock_client(std::string dst) {
 	if (cl->bind() < 0) {
 		printf("lock_client: call bind\n");
 	}
+#if LAB >= 5
+	ec_specified = false;
+#endif
 }
 
 int lock_client::stat(lock_protocol::lockid_t lid) {

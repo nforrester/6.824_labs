@@ -154,7 +154,7 @@ void fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
 	buf = yfs->read(ino, size, off);
 	printf("READ COMPLETE - DETAILED RESULTS:\n");
 	printf("size: %lu\n", buf.size());
-	for (int i = 0; i < buf.size(); i++) {
+	for (unsigned int i = 0; i < buf.size(); i++) {
 		printf("--%c--%d--\n", buf.data()[i], buf.data()[i]);
 	}
 	fuse_reply_buf(req, buf.data(), buf.size());

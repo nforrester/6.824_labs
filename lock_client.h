@@ -12,6 +12,10 @@
 class lock_client {
 	protected:
 		rpcc *cl;
+
+#if LAB >= 5
+		bool ec_specified;
+#endif
 	public:
 		lock_client(std::string d);
 		virtual ~lock_client() {};

@@ -56,6 +56,7 @@ class yfs_client {
 		int getfile(inum, fileinfo &);
 		int getdir(inum, dirinfo &);
 
+		bool lookup_already_locked(inum, const char*, fuse_entry_param*);
 		bool lookup(inum, const char*, fuse_entry_param*);
 		status create(inum, const char*, fuse_entry_param*, int);
 		status unlink(inum, const char*);

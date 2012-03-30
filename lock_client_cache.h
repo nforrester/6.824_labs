@@ -9,6 +9,7 @@
 #include "rpc.h"
 #include "lock_client.h"
 #include "lang/verify.h"
+#include "extent_client.h"
 
 #define NONE 0
 #define ACQU 1
@@ -45,6 +46,9 @@ class lock_client_cache : public lock_client {
 
 		std::map<lock_protocol::lockid_t, lock_record_cache_clt*> locks_held;
 		pthread_mutex_t locks_held_mutex;
+#if LAB >= 5
+		extent_client *ec;
+#endif
 	public:
 		lock_client_cache(std::string xdst, class lock_release_user *l = 0);
 		virtual ~lock_client_cache();
@@ -55,6 +59,9 @@ class lock_client_cache : public lock_client {
 		rlock_protocol::status revoke_handler(lock_protocol::lockid_t, int &);
 		rlock_protocol::status revoke_handler_(lock_protocol::lockid_t, int &, int);
 		rlock_protocol::status retry_handler(lock_protocol::lockid_t, int &);
+#if LAB >= 5
+		void set_extent_client(extent_client*);
+#endif
 };
 
 #endif

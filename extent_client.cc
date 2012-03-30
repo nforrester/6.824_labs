@@ -129,15 +129,10 @@ extent_protocol::status extent_client::put(extent_protocol::extentid_t eid, std:
 
 extent_protocol::status extent_client::remove(extent_protocol::extentid_t eid) {
 	extent_protocol::status ret = extent_protocol::OK;
+#if LAB < 5
 	int r;
 	ret = cl->call(extent_protocol::remove, eid, r);
-#if LAB >= 5
-	if (ret == extent_protocol::NOENT) {
-		// Well it must never have gotten flushed.
-		// That's ok, we wanted it to not be there, and so it's not, so everything is hunky dory.
-		ret = extent_protocol::OK;
-	}
-
+#else
 	pthread_mutex_lock(&cache_mutex);
 	if (cached_extents.count(eid)) {
 		cached_extents.erase(eid);
@@ -146,3 +141,45 @@ extent_protocol::status extent_client::remove(extent_protocol::extentid_t eid) {
 #endif
 	return ret;
 }
+
+#if LAB >= 5
+void extent_client::flush(extent_protocol::extentid_t eid) {
+	pthread_mutex_lock(&cache_mutex);
+
+	printf("FLUSHING...\n");
+
+	if (cached_extents.count(eid)) {
+		printf("found\n");
+		if (cached_extents[eid].buf_dirty) {
+			printf("dirty\n");
+			int r;
+			extent_protocol::status ret;
+			ret = cl->call(extent_protocol::put, eid, cached_extents[eid].buf, r);
+			if (ret != extent_protocol::OK) {
+				// this should never happen
+				printf("...FUCKED\n");
+				VERIFY(0);
+			}
+		}
+
+		printf("erasing\n");
+		cached_extents.erase(eid);
+	} else {
+		printf("not found\n");
+		int r;
+		extent_protocol::status ret;
+		printf("removing\n");
+		ret = cl->call(extent_protocol::remove, eid, r);
+		// NOENT is acceptable, because we could have put and then removed, without ever needing to flush
+		if (ret != extent_protocol::OK && ret != extent_protocol::NOENT) {
+			// this should never happen
+			printf("...FUCKED\n");
+			VERIFY(0);
+		}
+		printf("removed\n");
+	}
+
+	printf("...FLUSHED\n");
+	pthread_mutex_unlock(&cache_mutex);
+}
+#endif

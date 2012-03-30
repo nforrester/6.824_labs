@@ -309,6 +309,11 @@ rlock_protocol::status lock_client_cache::revoke_handler_(lock_protocol::lockid_
 	}
 
 	//printf("                                              c %s lhm revoke unlock1\n", id.c_str());
+	#if LAB >= 5
+	if (depth == 0 && ec_specified) {
+		ec->flush(lid);
+	}
+	#endif
 	pthread_mutex_unlock(&locks_held_mutex);
 
 	////printf("(C%d REVOKE %llu %lu %s %s) RETURN\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
@@ -324,3 +329,10 @@ rlock_protocol::status lock_client_cache::retry_handler(lock_protocol::lockid_t 
 	r = 1;
 	return ret;
 }
+
+#if LAB >= 5
+void lock_client_cache::set_extent_client(extent_client *eclt) {
+	ec = eclt;
+	ec_specified = true;
+}
+#endif

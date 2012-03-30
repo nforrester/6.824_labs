@@ -20,6 +20,9 @@ yfs_client::yfs_client(std::string extent_dst, std::string lock_dst) {
 		lc = new lock_client(lock_dst);
 	#else
 		lc = new lock_client_cache(lock_dst);
+		#if LAB >= 5
+			lc->set_extent_client(ec);
+		#endif
 	#endif
 }
 
@@ -56,6 +59,7 @@ int yfs_client::getfile(inum inum, fileinfo &fin) {
 
 	printf("getfile %016llx\n", inum);
 	extent_protocol::attr a;
+	lc->acquire(inum);
 	if (ec->getattr(inum, a) != extent_protocol::OK) {
 		r = IOERR;
 		goto release;
@@ -68,6 +72,7 @@ int yfs_client::getfile(inum inum, fileinfo &fin) {
 	printf("getfile %016llx -> sz %llu\n", inum, fin.size);
 
 	release:
+	lc->release(inum);
 
 	return r;
 }
@@ -79,6 +84,7 @@ int yfs_client::getdir(inum inum, dirinfo &din) {
 
 	printf("getdir %016llx\n", inum);
 	extent_protocol::attr a;
+	lc->acquire(inum);
 	if (ec->getattr(inum, a) != extent_protocol::OK) {
 		r = IOERR;
 		goto release;
@@ -88,11 +94,12 @@ int yfs_client::getdir(inum inum, dirinfo &din) {
 	din.ctime = a.ctime;
 
 	release:
+	lc->release(inum);
 
 	return r;
 }
 
-bool yfs_client::lookup(inum parent, const char *name, fuse_entry_param *e) {
+bool yfs_client::lookup_already_locked(inum parent, const char *name, fuse_entry_param *e) {
 	std::string dir_contents;
 	if (ec->get(parent, dir_contents) == extent_protocol::OK) {
 		std::istringstream dc(dir_contents, std::istringstream::in);
@@ -122,6 +129,14 @@ bool yfs_client::lookup(inum parent, const char *name, fuse_entry_param *e) {
 	return false;
 }
 
+bool yfs_client::lookup(inum parent, const char *name, fuse_entry_param *e) {
+	bool ret;
+	lc->acquire(parent);
+	ret = lookup_already_locked(parent, name, e);
+	lc->release(parent);
+	return ret;
+}
+
 yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_param *e, int mkdir) {
 	fuse_entry_param e_tmp;
 	extent_protocol::attr a_tmp;
@@ -130,7 +145,7 @@ yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_
 
 	lc->acquire(parent);
 	
-	if (lookup(parent, name, &e_tmp)) {
+	if (lookup_already_locked(parent, name, &e_tmp)) {
 		printf("file exists!\n");
 		lc->release(parent);
 		return EXIST;
@@ -199,7 +214,7 @@ yfs_client::status yfs_client::unlink(inum parent, const char *name) {
 
 	lc->acquire(parent);
 
-	if (!lookup(parent, name, &e_tmp)) {
+	if (!lookup_already_locked(parent, name, &e_tmp)) {
 		printf("file does not exist!\n");
 		lc->release(parent);
 		return NOENT;
@@ -262,10 +277,13 @@ yfs_client::status yfs_client::unlink(inum parent, const char *name) {
 
 yfs_client::status yfs_client::readdir(void (*dirbuf_add)(struct dirbuf*, const char*, fuse_ino_t), struct dirbuf *b, inum dir_inum) {
 	std::string dir_contents;
+	lc->acquire(dir_inum);
 	if (ec->get(dir_inum, dir_contents) != extent_protocol::OK) {
 		printf("failed to get directory contents!\n");
+		lc->release(dir_inum);
 		return NOENT;
 	}
+	lc->release(dir_inum);
 
 	printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dir_contents.c_str());
 
@@ -320,10 +338,13 @@ yfs_client::status yfs_client::setsize(inum finum, unsigned long long size) {
 
 std::string yfs_client::read(inum finum, unsigned long long size, unsigned long long offset) {
 	std::string file_contents;
+	lc->acquire(finum);
 	if (ec->get(finum, file_contents) != extent_protocol::OK) {
 		printf("failed to get contents of file!\n");
+		lc->release(finum);
 		return std::string();
 	}
+	lc->release(finum);
 	if (offset >= file_contents.size()) {
 		return std::string();
 	}

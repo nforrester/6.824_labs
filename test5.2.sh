@@ -21,6 +21,9 @@ echo ""
 mv lock_server.log lock_server4.log
 mv extent_server.log extent_server4.log
 
+mv yfs_client1.log yfs41.loggy
+mv yfs_client2.log yfs42.loggy
+
 export LAB=5
 
 make clean
@@ -40,6 +43,9 @@ echo ""
 
 mv lock_server.log lock_server5.log
 mv extent_server.log extent_server5.log
+
+mv yfs_client1.log yfs51.loggy
+mv yfs_client2.log yfs52.loggy
 
 echo ""
 echo "RESULTS:"
