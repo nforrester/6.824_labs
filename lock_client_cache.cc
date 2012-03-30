@@ -75,11 +75,11 @@ lock_protocol::status lock_client_cache::acquire_(lock_protocol::lockid_t lid, i
 
 	//printf("(C%d ACQUIRE %llu %lu %s)\n", depth, lid, pthread_self(), id.c_str());
 	if (depth == 0) {
-		printf("Client %s wants %llu\n", id.c_str(), lid);
+		//printf("Client %s wants %llu\n", id.c_str(), lid);
 	}
 
 	pthread_mutex_lock(&locks_held_mutex);
-	printf("                                              c %s lhm acquire lock1\n", id.c_str());
+	//printf("                                              c %s lhm acquire lock1\n", id.c_str());
 
 	if (locks_held.count(lid) == 0) {
 		locks_held[lid] = new lock_record_cache_clt();
@@ -94,63 +94,63 @@ lock_protocol::status lock_client_cache::acquire_(lock_protocol::lockid_t lid, i
 		if (0 == pthread_mutex_trylock(&locks_held[lid]->acquire_mutex)) {
 			locks_held[lid]->state = ACQU;
 			locks_held[lid]->owner = pthread_self();
-			printf("                                              c %s lhm acquire unlock2\n", id.c_str());
+			//printf("                                              c %s lhm acquire unlock2\n", id.c_str());
 			pthread_mutex_unlock(&locks_held_mutex);
 			lock_protocol::status ret = cl->call(lock_protocol::acquire, lid, id, r);
 			VERIFY (ret == lock_protocol::OK);
 			pthread_mutex_lock(&locks_held_mutex);
-			printf("                                              c %s lhm acquire lock2\n", id.c_str());
+			//printf("                                              c %s lhm acquire lock2\n", id.c_str());
 			pthread_mutex_unlock(&locks_held[lid]->acquire_mutex);
 			locks_held[lid]->state = LOCK;
 			pthread_cond_signal(&locks_held[lid]->cv);
 		} else {
-			printf("                                              c %s lhm acquire unlock3\n", id.c_str());
+			//printf("                                              c %s lhm acquire unlock3\n", id.c_str());
 			pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-			printf("                                              c %s lhm acquire lock3\n", id.c_str());
-			printf("                                              c %s lhm acquire unlock4\n", id.c_str());
+			//printf("                                              c %s lhm acquire lock3\n", id.c_str());
+			//printf("                                              c %s lhm acquire unlock4\n", id.c_str());
 			pthread_mutex_unlock(&locks_held_mutex);
 			acquire_(lid, depth + 1);
 			pthread_mutex_lock(&locks_held_mutex);
-			printf("                                              c %s lhm acquire lock4\n", id.c_str());
+			//printf("                                              c %s lhm acquire lock4\n", id.c_str());
 		}
 	} else if (locks_held[lid]->state == ACQU) {
 		while (locks_held[lid]->state == ACQU) {
-			printf("                                              c %s lhm acquire unlock5\n", id.c_str());
+			//printf("                                              c %s lhm acquire unlock5\n", id.c_str());
 			pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-			printf("                                              c %s lhm acquire lock5\n", id.c_str());
+			//printf("                                              c %s lhm acquire lock5\n", id.c_str());
 		}
-		printf("                                              c %s lhm acquire unlock6\n", id.c_str());
+		//printf("                                              c %s lhm acquire unlock6\n", id.c_str());
 		pthread_mutex_unlock(&locks_held_mutex);
 		acquire_(lid, depth + 1);
 		pthread_mutex_lock(&locks_held_mutex);
-		printf("                                              c %s lhm acquire lock6\n", id.c_str());
+		//printf("                                              c %s lhm acquire lock6\n", id.c_str());
 	} else if (locks_held[lid]->state == LOCK) {
 		if (locks_held[lid]->owner != pthread_self()){
 			while (locks_held[lid]->state == LOCK) {
-				printf("                                              c %s lhm acquire unlock9\n", id.c_str());
+				//printf("                                              c %s lhm acquire unlock9\n", id.c_str());
 				pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-				printf("                                              c %s lhm acquire lock9\n", id.c_str());
+				//printf("                                              c %s lhm acquire lock9\n", id.c_str());
 			}
-			printf("                                              c %s lhm acquire unlock10\n", id.c_str());
+			//printf("                                              c %s lhm acquire unlock10\n", id.c_str());
 			pthread_mutex_unlock(&locks_held_mutex);
 			acquire_(lid, depth + 1);
 			pthread_mutex_lock(&locks_held_mutex);
-			printf("                                              c %s lhm acquire lock10\n", id.c_str());
+			//printf("                                              c %s lhm acquire lock10\n", id.c_str());
 		} else {
 			// no need to do anything
 		}
 	} else if (locks_held[lid]->state == RELE) {
 		if (locks_held[lid]->owner != pthread_self()){
 			while (locks_held[lid]->state == RELE) {
-				printf("                                              c %s lhm acquire unlock11\n", id.c_str());
+				//printf("                                              c %s lhm acquire unlock11\n", id.c_str());
 				pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-				printf("                                              c %s lhm acquire lock11\n", id.c_str());
+				//printf("                                              c %s lhm acquire lock11\n", id.c_str());
 			}
-			printf("                                              c %s lhm acquire unlock12\n", id.c_str());
+			//printf("                                              c %s lhm acquire unlock12\n", id.c_str());
 			pthread_mutex_unlock(&locks_held_mutex);
 			acquire_(lid, depth + 1);
 			pthread_mutex_lock(&locks_held_mutex);
-			printf("                                              c %s lhm acquire lock12\n", id.c_str());
+			//printf("                                              c %s lhm acquire lock12\n", id.c_str());
 		} else {
 			// no need to do anything,
 			// even though we are going to release it sometime,
@@ -158,27 +158,27 @@ lock_protocol::status lock_client_cache::acquire_(lock_protocol::lockid_t lid, i
 		}
 	} else if (locks_held[lid]->state == RACK) {
 		while (locks_held[lid]->state == RACK) {
-			printf("                                              c %s lhm acquire unlock7\n", id.c_str());
+			//printf("                                              c %s lhm acquire unlock7\n", id.c_str());
 			pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-			printf("                                              c %s lhm acquire lock7\n", id.c_str());
+			//printf("                                              c %s lhm acquire lock7\n", id.c_str());
 		}
-		printf("                                              c %s lhm acquire unlock8\n", id.c_str());
+		//printf("                                              c %s lhm acquire unlock8\n", id.c_str());
 		pthread_mutex_unlock(&locks_held_mutex);
 		acquire_(lid, depth + 1);
 		pthread_mutex_lock(&locks_held_mutex);
-		printf("                                              c %s lhm acquire lock8\n", id.c_str());
+		//printf("                                              c %s lhm acquire lock8\n", id.c_str());
 	} else {
 		// this should never happen, this is an invalid state
 		VERIFY (0);
 	}
 
 	pthread_cond_broadcast(&locks_held[lid]->cv);
-	printf("                                              c %s lhm acquire unlock1\n", id.c_str());
+	//printf("                                              c %s lhm acquire unlock1\n", id.c_str());
 	pthread_mutex_unlock(&locks_held_mutex);
 
-	//printf("(C%d ACQUIRE %llu %lu %s %s) RETURN\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
+	////printf("(C%d ACQUIRE %llu %lu %s %s) RETURN\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
 	if (depth == 0) {
-		printf("Client %s Thread %lu locked %llu\n", id.c_str(), pthread_self(), lid);
+		//printf("Client %s Thread %lu locked %llu\n", id.c_str(), pthread_self(), lid);
 	}
 
 	return r;
@@ -191,31 +191,31 @@ lock_protocol::status lock_client_cache::release(lock_protocol::lockid_t lid) {
 lock_protocol::status lock_client_cache::release_(lock_protocol::lockid_t lid, int depth) {
 	int r = 1;
 
-	//printf("(C%d RELEASE %llu %lu %s)\n", depth, lid, pthread_self(), id.c_str());
+	////printf("(C%d RELEASE %llu %lu %s)\n", depth, lid, pthread_self(), id.c_str());
 	if (depth == 0) {
-		printf("Client %s no longer wants %llu\n", id.c_str(), lid);
+		//printf("Client %s no longer wants %llu\n", id.c_str(), lid);
 	}
 
 	pthread_mutex_lock(&locks_held_mutex);
-	printf("                                              c %s lhm release lock1\n", id.c_str());
+	//printf("                                              c %s lhm release lock1\n", id.c_str());
 
 	if (locks_held.count(lid) > 0) {
-		//printf("(C%d RELEASE %llu %lu %s %s)\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
+		////printf("(C%d RELEASE %llu %lu %s %s)\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
 		if (locks_held[lid]->state == FREE) {
 			// no need to do anything
 		} else if (locks_held[lid]->state == NONE) {
 			// no need to do anything
 		} else if (locks_held[lid]->state == ACQU) {
 			while (locks_held[lid]->state == ACQU) {
-				printf("                                              c %s lhm release unlock2\n", id.c_str());
+				//printf("                                              c %s lhm release unlock2\n", id.c_str());
 				pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-				printf("                                              c %s lhm release lock2\n", id.c_str());
+				//printf("                                              c %s lhm release lock2\n", id.c_str());
 			}
-			printf("                                              c %s lhm release unlock3\n", id.c_str());
+			//printf("                                              c %s lhm release unlock3\n", id.c_str());
 			pthread_mutex_unlock(&locks_held_mutex);
 			release_(lid, depth + 1);
 			pthread_mutex_lock(&locks_held_mutex);
-			printf("                                              c %s lhm release lock3\n", id.c_str());
+			//printf("                                              c %s lhm release lock3\n", id.c_str());
 		} else if (locks_held[lid]->state == LOCK) {
 			locks_held[lid]->state = FREE;
 		} else if (locks_held[lid]->state == RELE) {
@@ -229,25 +229,25 @@ lock_protocol::status lock_client_cache::release_(lock_protocol::lockid_t lid, i
 	}
 
 	pthread_cond_broadcast(&locks_held[lid]->cv);
-	printf("                                              c %s lhm release unlock1\n", id.c_str());
+	//printf("                                              c %s lhm release unlock1\n", id.c_str());
 
 	if (locks_held[lid]->state == FREE) {
 		if (depth == 0) {
-			printf("Client %s cached %llu\n", id.c_str(), lid);
+			//printf("Client %s cached %llu\n", id.c_str(), lid);
 		}
 	} else if (locks_held[lid]->state == RACK) {
 		if (depth == 0) {
-			printf("Client %s released %llu but isn't telling anyone\n", id.c_str(), lid);
+			//printf("Client %s released %llu but isn't telling anyone\n", id.c_str(), lid);
 		}
 	} else {
 		if (depth == 0) {
-			printf("Client %s WTF WTF WTF WTF %llu %s\n", id.c_str(), lid, state_to_string(locks_held[lid]->state));
+			//printf("Client %s WTF WTF WTF WTF %llu %s\n", id.c_str(), lid, state_to_string(locks_held[lid]->state));
 		}
 	}
 
 	pthread_mutex_unlock(&locks_held_mutex);
 
-	//printf("(C%d RELEASE %llu %lu %s %s) RETURN\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
+	////printf("(C%d RELEASE %llu %lu %s %s) RETURN\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
 	return r;
 }
 
@@ -259,45 +259,45 @@ rlock_protocol::status lock_client_cache::revoke_handler_(lock_protocol::lockid_
 	int ret = rlock_protocol::OK;
 	r = 1;
 
-	//printf("(C%d REVOKE %llu %lu %s)\n", depth, lid, pthread_self(), id.c_str());
+	////printf("(C%d REVOKE %llu %lu %s)\n", depth, lid, pthread_self(), id.c_str());
 	if (depth == 0) {
-		printf("Client %s had %llu revoked\n", id.c_str(), lid);
+		//printf("Client %s had %llu revoked\n", id.c_str(), lid);
 	}
 
 	pthread_mutex_lock(&locks_held_mutex);
-	printf("                                              c %s lhm revoke lock1\n", id.c_str());
+	//printf("                                              c %s lhm revoke lock1\n", id.c_str());
 
 	if (locks_held.count(lid) > 0) {
-		//printf("(C%d REVOKE %llu %lu %s %s) BEFORE\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
+		////printf("(C%d REVOKE %llu %lu %s %s) BEFORE\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
 		if (locks_held[lid]->state == FREE) {
 			locks_held[lid]->state = NONE;
 		} else if (locks_held[lid]->state == NONE) {
 			// no need to do anything
 		} else if (locks_held[lid]->state == ACQU) {
 			while (locks_held[lid]->state == ACQU) {
-				printf("                                              c %s lhm revoke unlock2\n", id.c_str());
+				//printf("                                              c %s lhm revoke unlock2\n", id.c_str());
 				pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-				printf("                                              c %s lhm revoke lock2\n", id.c_str());
+				//printf("                                              c %s lhm revoke lock2\n", id.c_str());
 			}
-			printf("                                              c %s lhm revoke unlock3\n", id.c_str());
+			//printf("                                              c %s lhm revoke unlock3\n", id.c_str());
 			pthread_mutex_unlock(&locks_held_mutex);
 			revoke_handler_(lid, r, depth + 1);
 			pthread_mutex_lock(&locks_held_mutex);
-			printf("                                              c %s lhm revoke lock3\n", id.c_str());
+			//printf("                                              c %s lhm revoke lock3\n", id.c_str());
 		} else if (locks_held[lid]->state == LOCK) {
 			locks_held[lid]->state = RELE;
 			while (locks_held[lid]->state != RACK) {
-				printf("                                              c %s lhm revoke unlock4\n", id.c_str());
+				//printf("                                              c %s lhm revoke unlock4\n", id.c_str());
 				pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-				printf("                                              c %s lhm revoke lock4\n", id.c_str());
+				//printf("                                              c %s lhm revoke lock4\n", id.c_str());
 			}
 			locks_held[lid]->state = NONE;
 			pthread_cond_broadcast(&locks_held[lid]->cv);
 		} else if (locks_held[lid]->state == RELE) {
 			while (locks_held[lid]->state != NONE) {
-				printf("                                              c %s lhm revoke unlock5\n", id.c_str());
+				//printf("                                              c %s lhm revoke unlock5\n", id.c_str());
 				pthread_cond_wait(&locks_held[lid]->cv, &locks_held_mutex);
-				printf("                                              c %s lhm revoke lock5\n", id.c_str());
+				//printf("                                              c %s lhm revoke lock5\n", id.c_str());
 			}
 		} else if (locks_held[lid]->state == RACK) {
 			locks_held[lid]->state = NONE;
@@ -308,12 +308,12 @@ rlock_protocol::status lock_client_cache::revoke_handler_(lock_protocol::lockid_
 		}
 	}
 
-	printf("                                              c %s lhm revoke unlock1\n", id.c_str());
+	//printf("                                              c %s lhm revoke unlock1\n", id.c_str());
 	pthread_mutex_unlock(&locks_held_mutex);
 
-	//printf("(C%d REVOKE %llu %lu %s %s) RETURN\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
+	////printf("(C%d REVOKE %llu %lu %s %s) RETURN\n", depth, lid, pthread_self(), id.c_str(), state_to_string(locks_held[lid]->state));
 	if (depth == 0) {
-		printf("Client %s released %llu publicly\n", id.c_str(), lid);
+		//printf("Client %s released %llu publicly\n", id.c_str(), lid);
 	}
 
 	return ret;

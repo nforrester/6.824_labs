@@ -14,6 +14,14 @@ class extent {
 		extent(std::string buffer, extent_protocol::attr attributes);
 		std::string buf;
 		extent_protocol::attr a;
+
+#if LAB >= 5
+		bool buf_valid;
+		bool buf_dirty;
+
+		bool a_valid;
+		bool a_dirty;
+#endif
 };
 
 class extent_server {
@@ -29,10 +37,3 @@ class extent_server {
 };
 
 #endif 
-
-
-
-
-
-
-

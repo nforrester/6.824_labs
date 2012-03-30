@@ -330,7 +330,7 @@ std::string yfs_client::read(inum finum, unsigned long long size, unsigned long 
 	printf("READ(%llu, %llu, %llu)", finum, size, offset);
 	printf("BEGIN READ WHOLE:\n%s\nEND READ WHOLE\n", file_contents.c_str());
 	file_contents = file_contents.substr(offset, size);
-	printf("BEGIN READ PART:\n%s\nEND READ PART\n", file_contents.c_str());
+	printf("BEGIN READ PART:\n--%s--\nEND READ PART\n", file_contents.c_str());
 	return file_contents;
 }
 
