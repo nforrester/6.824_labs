@@ -64,7 +64,7 @@ rpc/rpctest: $(patsubst %.cc,%.o,$(rpctest)) rpc/librpc.a
 lock_demo=lock_demo.cc lock_client.cc
 lock_demo : $(patsubst %.cc,%.o,$(lock_demo)) rpc/librpc.a
 
-lock_tester=lock_tester.cc lock_client.cc
+lock_tester=lock_tester.cc lock_client.cc extent_client.cc extent_server.cc
 ifeq ($(LAB4GE),1)
   lock_tester += lock_client_cache.cc
 endif
@@ -86,7 +86,7 @@ endif
 
 lock_server : $(patsubst %.cc,%.o,$(lock_server)) rpc/librpc.a
 
-yfs_client=yfs_client.cc extent_client.cc fuse.cc
+yfs_client=yfs_client.cc extent_client.cc extent_server.cc fuse.cc
 ifeq ($(LAB3GE),1)
   yfs_client += lock_client.cc
 endif
@@ -122,7 +122,7 @@ fuse.o: fuse.cc
 -include *.d
 -include rpc/*.d
 
-clean_files=rpc/rpctest rpc/*.o rpc/*.d rpc/librpc.a *.o *.d yfs_client extent_server lock_server lock_tester lock_demo rpctest test-lab-3-b test-lab-3-c rsm_tester
+clean_files=rpc/rpctest rpc/*.o rpc/*.d rpc/librpc.a *.o *.d yfs_client extent_server lock_server lock_tester lock_demo rpctest test-lab-3-b test-lab-3-c rsm_tester extent_server.log lock_server.log yfs_client1.log yfs_client2.log *-lab*.tgz yfs1 yfs2 lock_protocol_diagram.png lock_protocol_design.pdf lock_protocol_design.log lock_protocol_design.aux core.*
 .PHONY: clean handin
 clean: 
 	rm $(clean_files) -rf 
@@ -135,3 +135,9 @@ handin:
 	@bash -c "cd ../; tar -X <(tr ' ' '\n' < <(echo '$(handin_ignore)')) -czvf $(handin_file) $(labdir); mv $(handin_file) $(labdir); cd $(labdir)"
 	@echo Please email $(handin_file) to 6.824-submit@pdos.csail.mit.edu
 	@echo Thanks!
+
+lock_protocol_diagram.png: lock_protocol_diagram.dot
+	dot -Tpng lock_protocol_diagram.dot -o lock_protocol_diagram.png
+lock_protocol_design.pdf: lock_protocol_design.tex lock_protocol_diagram.png
+	pdflatex lock_protocol_design.tex
+	pdflatex lock_protocol_design.tex
