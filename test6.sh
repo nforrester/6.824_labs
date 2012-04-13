@@ -2,6 +2,7 @@
 
 make
 
+rm -f *.log
 echo ""
 echo "---------- BEGINNING TESTS 0-7 ----------"
 echo ""
@@ -11,4 +12,4 @@ echo "----------- ENDING TESTS 0-7 ------------"
 echo ""
 
 killall lock_server
-rm -f *.log
+#rm -f *.log

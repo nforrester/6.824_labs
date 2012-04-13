@@ -139,7 +139,44 @@ bool proposer::prepare(unsigned instance,
 	// You fill this in for Lab 6
 	// Note: if got an "oldinstance" reply, commit the instance using
 	// acc->commit(...), and return false.
-	return false;
+	
+	printf("PREPARE(%u)\n", instance);
+	printf("NODES:\n");
+
+	prop_t highest_n_a;
+	bool first_iteration = true;
+	std::vector<std::string>::iterator node;
+	for (node = nodes.begin(); node != nodes.end(); node++) {
+		printf("%s\n", (*node).c_str());
+		handle h(*node);
+		rpcc *cl = h.safebind();
+		if (cl) {
+			paxos_protocol::preparearg parg;
+			parg.instance = instance;
+			parg.n = my_n;
+			paxos_protocol::prepareres pres;
+			if (cl->call(paxos_protocol::preparereq, me, parg, pres, rpcc::to(1000)) != paxos_protocol::OK) {
+				printf("preparereq(%s, (%u, (%u, %s))) returned not OK\n", me.c_str(), instance, my_n.n, my_n.m.c_str());
+			} else {
+				if (pres.oldinstance) {
+					printf("COMMITTING shit!\n");
+					acc->commit(instance, pres.v_a);
+					printf("PREPARE RETURN FALSE\n");
+					return false;
+				}
+				if (pres.accept) {
+					accepts.push_back(*node);
+				}
+				if (first_iteration || pres.n_a > highest_n_a) {
+					first_iteration = false;
+					highest_n_a = pres.n_a;
+					v = pres.v_a;
+				}
+			}
+		}
+	}
+	printf("PREPARE RETURN TRUE\n");
+	return true;
 }
 
 // run() calls this to send out accept RPCs to accepts.
@@ -147,10 +184,42 @@ bool proposer::prepare(unsigned instance,
 void proposer::accept(unsigned instance, std::vector<std::string> &accepts,
                       std::vector<std::string> nodes, std::string v) {
 	// You fill this in for Lab 6
+
+	std::vector<std::string>::iterator node;
+	for (node = nodes.begin(); node != nodes.end(); node++) {
+		handle h(*node);
+		rpcc *cl = h.safebind();
+		if (cl) {
+			paxos_protocol::acceptarg aarg;
+			aarg.instance = instance;
+			aarg.n = my_n;
+			aarg.v = v;
+			bool ares;
+			if (cl->call(paxos_protocol::acceptreq, me, aarg, ares, rpcc::to(1000)) == paxos_protocol::OK) {
+				printf("acceptreq(%s, (%u, (%u, %s), %s)) returned not OK\n", me.c_str(), instance, my_n.n, my_n.m.c_str(), v.c_str());
+			}
+			if (ares) {
+				accepts.push_back(*node);
+			}
+		}
+	}
 }
 
 void proposer::decide(unsigned instance, std::vector<std::string> accepts, std::string v) {
 	// You fill this in for Lab 6
+
+	std::vector<std::string>::iterator acceptor;
+	for (acceptor = accepts.begin(); acceptor != accepts.end(); acceptor++) {
+		handle h(*acceptor);
+		rpcc *cl = h.safebind();
+		if (cl) {
+			paxos_protocol::decidearg darg;
+			darg.instance = instance;
+			darg.v = v;
+			int dres;
+			VERIFY(cl->call(paxos_protocol::decidereq, me, darg, dres, rpcc::to(1000)) == paxos_protocol::OK);
+		}
+	}
 }
 
 acceptor::acceptor(class paxos_change *_cfg, bool _first, std::string _me, std::string _value)
@@ -183,14 +252,41 @@ paxos_protocol::status acceptor::preparereq(std::string src,
 					    paxos_protocol::prepareres &r) {
 	// You fill this in for Lab 6
 	// Remember to initialize *BOTH* r.accept and r.oldinstance appropriately.
-	// Remember to *log* the proposal if the proposal is accepted.
+	// TODO: Remember to *log* the proposal if the proposal is accepted.
+	
+	r.oldinstance = a.instance <= instance_h;
+	if (!r.oldinstance) {
+		if (a.n > n_h) {
+			n_h = a.n;
+			r.accept = true;
+			l->logprop(n_h);
+		} else {
+			r.accept = false;
+		}
+	} else {
+		r.accept = false;
+		printf("OLDINSTANCE: %s, (%u, %s)\n", v_a.c_str(), n_a.n, n_a.m.c_str());
+	}
+	r.v_a = v_a;
+	r.n_a = n_a;
+
 	return paxos_protocol::OK;
 }
 
 // the src argument is only for debug purpose
 paxos_protocol::status acceptor::acceptreq(std::string src, paxos_protocol::acceptarg a, bool &r) {
 	// You fill this in for Lab 6
-	// Remember to *log* the accept if the proposal is accepted.
+	// TODO: Remember to *log* the accept if the proposal is accepted.
+
+	if (a.n >= n_h) {
+		v_a = a.v;
+		n_a = a.n;
+		l->logaccept(n_a, v_a);
+		printf("ACCEPTED: %s, (%u, %s)\n", v_a.c_str(), n_a.n, n_a.m.c_str());
+		r = true;
+	} else {
+		r = false;
+	}
 
 	return paxos_protocol::OK;
 }
