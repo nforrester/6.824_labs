@@ -9,90 +9,381 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <fuse/fuse_lowlevel.h>
+#include <sstream>
 
+#define MAX_FILENAME_LEN 2048
 
-yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
-{
-  ec = new extent_client(extent_dst);
-
+yfs_client::yfs_client(std::string extent_dst, std::string lock_dst) {
+	ec = new extent_client(extent_dst);
+	#if LAB <= 3
+		lc = new lock_client(lock_dst);
+	#else
+		lc = new lock_client_cache(lock_dst);
+		#if LAB >= 5
+			lc->set_extent_client(ec);
+		#endif
+	#endif
 }
 
-yfs_client::inum
-yfs_client::n2i(std::string n)
-{
-  std::istringstream ist(n);
-  unsigned long long finum;
-  ist >> finum;
-  return finum;
+yfs_client::inum yfs_client::n2i(std::string n) {
+	std::istringstream ist(n);
+	unsigned long long finum;
+	ist >> finum;
+	return finum;
 }
 
-std::string
-yfs_client::filename(inum inum)
-{
-  std::ostringstream ost;
-  ost << inum;
-  return ost.str();
+std::string yfs_client::filename(inum inum) {
+	std::ostringstream ost;
+	ost << inum;
+	return ost.str();
 }
 
-bool
-yfs_client::isfile(inum inum)
-{
-  if(inum & 0x80000000)
-    return true;
-  return false;
+bool yfs_client::isfile(inum inum) {
+	if (inum & 0x80000000) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
-bool
-yfs_client::isdir(inum inum)
-{
-  return ! isfile(inum);
+bool yfs_client::isdir(inum inum) {
+	return ! isfile(inum);
 }
 
-int
-yfs_client::getfile(inum inum, fileinfo &fin)
-{
-  int r = OK;
-  // You modify this function for Lab 3
-  // - hold and release the file lock
+int yfs_client::getfile(inum inum, fileinfo &fin) {
+	int r = OK;
 
-  printf("getfile %016llx\n", inum);
-  extent_protocol::attr a;
-  if (ec->getattr(inum, a) != extent_protocol::OK) {
-    r = IOERR;
-    goto release;
-  }
+	// You modify this function for Lab 3
+	// - hold and release the file lock
 
-  fin.atime = a.atime;
-  fin.mtime = a.mtime;
-  fin.ctime = a.ctime;
-  fin.size = a.size;
-  printf("getfile %016llx -> sz %llu\n", inum, fin.size);
+	printf("getfile %016llx\n", inum);
+	extent_protocol::attr a;
+	lc->acquire(inum);
+	if (ec->getattr(inum, a) != extent_protocol::OK) {
+		r = IOERR;
+		goto release;
+	}
 
- release:
+	fin.atime = a.atime;
+	fin.mtime = a.mtime;
+	fin.ctime = a.ctime;
+	fin.size = a.size;
+	printf("getfile %016llx -> sz %llu\n", inum, fin.size);
 
-  return r;
+	release:
+	lc->release(inum);
+
+	return r;
 }
 
-int
-yfs_client::getdir(inum inum, dirinfo &din)
-{
-  int r = OK;
-  // You modify this function for Lab 3
-  // - hold and release the directory lock
+int yfs_client::getdir(inum inum, dirinfo &din) {
+	int r = OK;
+	// You modify this function for Lab 3
+	// - hold and release the directory lock
 
-  printf("getdir %016llx\n", inum);
-  extent_protocol::attr a;
-  if (ec->getattr(inum, a) != extent_protocol::OK) {
-    r = IOERR;
-    goto release;
-  }
-  din.atime = a.atime;
-  din.mtime = a.mtime;
-  din.ctime = a.ctime;
+	printf("getdir %016llx\n", inum);
+	extent_protocol::attr a;
+	lc->acquire(inum);
+	if (ec->getattr(inum, a) != extent_protocol::OK) {
+		r = IOERR;
+		goto release;
+	}
+	din.atime = a.atime;
+	din.mtime = a.mtime;
+	din.ctime = a.ctime;
 
- release:
-  return r;
+	release:
+	lc->release(inum);
+
+	return r;
 }
 
+bool yfs_client::lookup_already_locked(inum parent, const char *name, fuse_entry_param *e) {
+	std::string dir_contents;
+	if (ec->get(parent, dir_contents) == extent_protocol::OK) {
+		std::istringstream dc(dir_contents, std::istringstream::in);
+		inum finum = -1, prev_finum;
+		char fname[MAX_FILENAME_LEN];
+		fname[0] = 0;
+		printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dir_contents.c_str());
+		printf("LOOKUP SEARCH BEGIN\n");
+		while (!dc.eof()) {
+			prev_finum = finum;
+			dc >> finum;
+			dc.getline(fname, MAX_FILENAME_LEN); // call once to strip newline
+			dc.getline(fname, MAX_FILENAME_LEN);
+			if (finum == prev_finum && 0 == strncmp("", fname, MAX_FILENAME_LEN)) {
+				break;
+			}
+			printf("file(%llu, \"%s\")\n", finum, fname);
+			if (strncmp(name, fname, MAX_FILENAME_LEN) == 0) {
+				printf("lookup finum: %llu\n", (unsigned long long) finum);
+				e->ino = finum;
+				printf("LOOKUP SEARCH END GOOD\n");
+				return true;
+			}
+		}
+		printf("LOOKUP SEARCH END BAD\n");
+	}
+	return false;
+}
 
+bool yfs_client::lookup(inum parent, const char *name, fuse_entry_param *e) {
+	bool ret;
+	lc->acquire(parent);
+	ret = lookup_already_locked(parent, name, e);
+	lc->release(parent);
+	return ret;
+}
 
+yfs_client::status yfs_client::create(inum parent, const char *name, fuse_entry_param *e, int mkdir) {
+	fuse_entry_param e_tmp;
+	extent_protocol::attr a_tmp;
+	inum finum;
+	int file_locked = 0;
+
+	lc->acquire(parent);
+	
+	if (lookup_already_locked(parent, name, &e_tmp)) {
+		printf("file exists!\n");
+		lc->release(parent);
+		return EXIST;
+	}
+
+	do {
+		if (file_locked) {
+			lc->release(finum);
+		}
+		finum = random();
+		finum |= 0x80000000;
+		if (mkdir) {
+			finum = ~finum;
+		}
+		lc->acquire(finum);
+		file_locked = 1;
+	} while (ec->getattr(finum, a_tmp) != extent_protocol::NOENT);
+
+	if (ec->put(finum, std::string()) != extent_protocol::OK) {
+		printf("failed to create extent!\n");
+		lc->release(finum);
+		lc->release(parent);
+		return NOENT;
+	}
+
+	std::string dir_contents;
+	if (ec->get(parent, dir_contents) != extent_protocol::OK) {
+		printf("failed to get parent directory contents!\n");
+		if (ec->remove(finum) != extent_protocol::OK) {
+			printf("failed to remove orphan extent! FUCK!\n");
+		}
+		lc->release(finum);
+		lc->release(parent);
+		return NOENT;
+	}
+
+	std::ostringstream dc(dir_contents, std::ostringstream::out | std::ostringstream::app);
+	dc << finum << std::endl;
+	dc << name << std::endl;
+
+	if (ec->put(parent, dc.str()) != extent_protocol::OK) {
+		printf("failed to put parent directory contents!\n");
+		if (ec->remove(finum) != extent_protocol::OK) {
+			printf("failed to remove orphan extent! FUCK!\n");
+		}
+		lc->release(finum);
+		lc->release(parent);
+		return NOENT;
+	}
+	
+	printf("create finum: %llu\n", (unsigned long long) finum);
+	e->ino = finum;
+	printf("create e->ino: %lu\n", (unsigned long) e->ino);
+
+	printf("everything is hunky dory!\n");
+	lc->release(finum);
+	lc->release(parent);
+	return OK;
+}
+
+yfs_client::status yfs_client::unlink(inum parent, const char *name) {
+	fuse_entry_param e_tmp;
+	inum finum, prev_finum;
+	char fname[MAX_FILENAME_LEN];
+	int cmp;
+
+	lc->acquire(parent);
+
+	if (!lookup_already_locked(parent, name, &e_tmp)) {
+		printf("file does not exist!\n");
+		lc->release(parent);
+		return NOENT;
+	}
+
+	std::string dir_contents_old;
+	std::string dir_contents_new;
+	if (ec->get(parent, dir_contents_old) != extent_protocol::OK) {
+		printf("failed to get parent directory contents!\n");
+		lc->release(parent);
+		return NOENT;
+	}
+
+	std::istringstream dco(dir_contents_old, std::istringstream::in);
+	std::ostringstream dcn(dir_contents_new, std::ostringstream::out | std::ostringstream::trunc);
+
+	printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dir_contents_old.c_str());
+	printf("UNLINK SEARCH BEGIN\n");
+	finum = -1;
+	while (!dco.eof()) {
+		prev_finum = finum;
+		dco >> finum;
+		dco.getline(fname, MAX_FILENAME_LEN); // call once to strip newline
+		dco.getline(fname, MAX_FILENAME_LEN);
+		if (finum == prev_finum && 0 == strncmp("", fname, MAX_FILENAME_LEN)) {
+			break;
+		}
+		cmp = strncmp(name, fname, MAX_FILENAME_LEN);
+		printf("file(%llu, \"%s\") - ", finum, fname);
+		if (cmp != 0){
+			printf("NOT IT!\n");
+			// If this isn't the file we're deleting
+			dcn << finum << std::endl;
+			dcn << fname << std::endl;
+		} else {
+			lc->acquire(finum);
+			printf("DIE! DIE! DIE!\n");
+			if (ec->remove(finum) != extent_protocol::OK) {
+				printf("failed to delete file for some odd reason!\n");
+				lc->release(finum);
+				lc->release(parent);
+				return NOENT;
+			}
+			lc->release(finum);
+		}
+	}
+	printf("UNLINK SEARCH END\n");
+	printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dcn.str().c_str());
+
+	if (ec->put(parent, dcn.str()) != extent_protocol::OK) {
+		printf("failed to put parent directory contents!\n");
+		lc->release(parent);
+		return NOENT;
+	}
+
+	printf("everything is hunky dory!\n");
+	lc->release(parent);
+	return OK;
+}
+
+yfs_client::status yfs_client::readdir(void (*dirbuf_add)(struct dirbuf*, const char*, fuse_ino_t), struct dirbuf *b, inum dir_inum) {
+	std::string dir_contents;
+	lc->acquire(dir_inum);
+	if (ec->get(dir_inum, dir_contents) != extent_protocol::OK) {
+		printf("failed to get directory contents!\n");
+		lc->release(dir_inum);
+		return NOENT;
+	}
+	lc->release(dir_inum);
+
+	printf("DIR_CONTENTS BEGIN\n%s\nDIR_CONTENTS END\n", dir_contents.c_str());
+
+	if (dir_contents.compare("") == 0) {
+		printf("DIRECTORY EMPTY\n");
+	} else {
+		std::istringstream dc(dir_contents, std::istringstream::in);
+		inum finum = -1, prev_finum;
+		char fname[MAX_FILENAME_LEN];
+		fname[0] = 0;
+		while (!dc.eof()) {
+			prev_finum = finum;
+			dc >> finum;
+			dc.getline(fname, MAX_FILENAME_LEN); // call once to strip newline
+			dc.getline(fname, MAX_FILENAME_LEN);
+			if (finum == prev_finum && 0 == strncmp("", fname, MAX_FILENAME_LEN)) {
+				break;
+			}
+			printf("DIRECTORY ENTRY(%llu, \"%s\")\n", finum, fname);
+			(*dirbuf_add)(b, fname, finum);
+		}
+	}
+	return OK;
+}
+
+yfs_client::status yfs_client::setsize(inum finum, unsigned long long size) {
+	lc->acquire(finum);
+	if (size == 0) {
+		// we don't care what was there before, saves some rpc calls
+		if (ec->put(finum, std::string()) != extent_protocol::OK) {
+			printf("failed to truncate file!\n");
+			lc->release(finum);
+			return IOERR;
+		}
+	} else {
+		std::string file_contents;
+		if (ec->get(finum, file_contents) != extent_protocol::OK) {
+			printf("failed to get contents of file!\n");
+			lc->release(finum);
+			return IOERR;
+		}
+		file_contents.resize(size, 0);
+		if (ec->put(finum, file_contents) != extent_protocol::OK) {
+			printf("failed to put contents of file!\n");
+			lc->release(finum);
+			return IOERR;
+		}
+	}
+	lc->release(finum);
+	return OK;
+}
+
+std::string yfs_client::read(inum finum, unsigned long long size, unsigned long long offset) {
+	std::string file_contents;
+	lc->acquire(finum);
+	if (ec->get(finum, file_contents) != extent_protocol::OK) {
+		printf("failed to get contents of file!\n");
+		lc->release(finum);
+		return std::string();
+	}
+	lc->release(finum);
+	if (offset >= file_contents.size()) {
+		return std::string();
+	}
+	printf("READ(%llu, %llu, %llu)", finum, size, offset);
+	printf("BEGIN READ WHOLE:\n%s\nEND READ WHOLE\n", file_contents.c_str());
+	file_contents = file_contents.substr(offset, size);
+	printf("BEGIN READ PART:\n--%s--\nEND READ PART\n", file_contents.c_str());
+	return file_contents;
+}
+
+void yfs_client::write(inum finum, unsigned long long size, unsigned long long offset, const char *buf) {
+	printf("WRITE(%llu, %llu, %llu):\nBEGIN WRITE:\n%s\nEND WRITE\n", finum, size, offset, buf);
+	std::string file_contents;
+	lc->acquire(finum);
+	if (ec->get(finum, file_contents) != extent_protocol::OK) {
+		printf("failed to get contents of file!\n");
+		lc->release(finum);
+		return;
+	}
+	printf("gotten contents\n");
+	if (offset < file_contents.size() && offset + size > file_contents.size()) {
+		file_contents.erase(offset, file_contents.size());
+	}
+	printf("truncated if necessary\n");
+	if (offset > file_contents.size()) {
+		file_contents.insert(file_contents.size(), offset - file_contents.size(), 0);
+	}
+	printf("padded if necessary\n");
+	if (offset == file_contents.size()) {
+		file_contents.insert(offset, buf, size);
+	} else {
+		file_contents.replace(offset, size, buf, size);
+	}
+	printf("written\n");
+	if (ec->put(finum, file_contents) != extent_protocol::OK) {
+		printf("failed to put contents of file!\n");
+		lc->release(finum);
+		return;
+	}
+	printf("everything hunky dory!\n");
+	lc->release(finum);
+}

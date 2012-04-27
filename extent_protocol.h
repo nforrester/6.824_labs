@@ -5,44 +5,42 @@
 
 #include "rpc.h"
 
-class extent_protocol {
- public:
-  typedef int status;
-  typedef unsigned long long extentid_t;
-  enum xxstatus { OK, RPCERR, NOENT, IOERR };
-  enum rpc_numbers {
-    put = 0x6001,
-    get,
-    getattr,
-    remove
-  };
+#define ROOT_DIRECTORY_ID 0x00000001
 
-  struct attr {
-    unsigned int atime;
-    unsigned int mtime;
-    unsigned int ctime;
-    unsigned int size;
-  };
+class extent_protocol {
+	public:
+		typedef int status;
+		typedef unsigned long long extentid_t;
+		enum xxstatus { OK, RPCERR, NOENT, IOERR };
+		enum rpc_numbers {
+			put = 0x6001,
+			get,
+			getattr,
+			remove
+		};
+
+		struct attr {
+			unsigned int atime;
+			unsigned int mtime;
+			unsigned int ctime;
+			unsigned int size;
+		};
 };
 
-inline unmarshall &
-operator>>(unmarshall &u, extent_protocol::attr &a)
-{
-  u >> a.atime;
-  u >> a.mtime;
-  u >> a.ctime;
-  u >> a.size;
-  return u;
+inline unmarshall & operator>>(unmarshall &u, extent_protocol::attr &a) {
+	u >> a.atime;
+	u >> a.mtime;
+	u >> a.ctime;
+	u >> a.size;
+	return u;
 }
 
-inline marshall &
-operator<<(marshall &m, extent_protocol::attr a)
-{
-  m << a.atime;
-  m << a.mtime;
-  m << a.ctime;
-  m << a.size;
-  return m;
+inline marshall & operator<<(marshall &m, extent_protocol::attr a) {
+	m << a.atime;
+	m << a.mtime;
+	m << a.ctime;
+	m << a.size;
+	return m;
 }
 
 #endif 
